@@ -1,0 +1,11 @@
+---
+- hosts: localhost
+  remote_user: "{{ lookup('env','LOGNAME') }}"
+  become: yes
+  become_method: sudo
+  roles:
+    - influxdb
+    - grafana
+  environment:
+    http_proxy: "{{ lookup('env','http_proxy') }}" 
+    https_proxy: "{{ lookup('env','https_proxy') }}" 

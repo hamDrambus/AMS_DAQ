@@ -1,0 +1,32 @@
+---
+- hosts: localhost
+  remote_user: "{{ lookup('env','LOGNAME') }}"
+  become: yes
+  become_method: sudo
+  roles:
+    - { role: toolchain, 
+        toolchain_dir: "/opt/toolchains", 
+        toolchain_url: "https://releases.linaro.org/components/toolchain/binaries/latest-7/", 
+        toolchain_arch: "arm-linux-gnueabihf", 
+        toolchain_name: "gcc-linaro-7.5.0-2019.12-x86_64_arm-linux-gnueabihf" }
+
+    - { role: toolchain, 
+
+        toolchain_dir: "/opt/toolchains", 
+        toolchain_url: "https://releases.linaro.org/components/toolchain/binaries/latest-7/", 
+        toolchain_arch: "armv8l-linux-gnueabihf", 
+        toolchain_name: "gcc-linaro-7.5.0-2019.12-x86_64_armv8l-linux-gnueabihf" }
+
+    - { role: toolchain, 
+        toolchain_dir: "/opt/toolchains", 
+        toolchain_url: "https://releases.linaro.org/components/toolchain/binaries/latest-7/", 
+        toolchain_arch: "aarch64-linux-gnu", 
+        toolchain_name: "gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu" }
+
+  environment:
+    LD_LIBRARY_PATH: "{{ lookup('env','LD_LIBRARY_PATH') }}" 
+    PATH: "{{ lookup('env','PATH') }}"
+    CC: "{{ lookup('env','CC') }}"
+    CXX: "{{ lookup('env','CXX') }}"
+    http_proxy: "{{ lookup('env','http_proxy') }}" 
+    https_proxy: "{{ lookup('env','https_proxy') }}" 

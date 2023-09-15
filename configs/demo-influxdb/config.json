@@ -1,0 +1,184 @@
+{
+  "version": 11,
+  "group": "daq",
+  "components": [
+    {
+      "name": "readoutinterface01",
+      "host": "localhost",
+      "port": 5555,
+      "modules":[{
+      "type": "ReadoutInterface",
+      "name": "readoutinterface01",
+      "settings": {
+        "board_id": 0,
+        "delay_us": 100,
+        "payload": {
+          "min": 200,
+          "max": 1500
+        }
+      },
+      "connections": {
+        "senders": [
+          {
+            "type": "ZMQPubSub",
+            "chid": 0,
+            "transport": "tcp",
+            "host": "*",
+            "port": 8101,
+            "queue":{
+              "queue_size":1000,
+              "type":"FollyProducerConsumer"
+            }
+          }
+        ]
+      }
+      }],
+      "loglevel": {
+        "core": "INFO",
+        "module": "INFO",
+        "connection": "WARNING"
+      },
+      "metrics_settings": {
+        "influxDb_uri": "http://localhost:8086/write?db=",
+        "influxDb_name": "DAQlingMetrics"
+      }
+    },
+    {
+      "name": "readoutinterface02",
+      "host": "localhost",
+      "port": 5556,
+      "modules":[{
+      "type": "ReadoutInterface",
+      "name": "readoutinterface02",
+      "settings": {
+        "board_id": 1,
+        "delay_us": 100,
+        "payload": {
+          "min": 200,
+          "max": 1500
+        }
+      },
+      "connections": {
+        "senders": [
+          {
+            "type": "ZMQPair",
+            "chid": 0,
+            "transport": "tcp",
+            "host": "*",
+            "port": 8102,
+            "queue":{
+              "type":"FollyProducerConsumer",
+              "queue_size":1000
+            }
+          }
+        ]
+      }
+    }],
+    "loglevel": {
+      "core": "INFO",
+      "module": "INFO",
+      "connection": "WARNING"
+    },
+      "metrics_settings": {
+        "influxDb_uri": "http://localhost:8086/write?db=",
+        "influxDb_name": "DAQlingMetrics"
+      }
+    },
+    {
+      "name": "eventbuilder01",
+      "host": "localhost",
+      "port": 5560,
+      "modules":[{
+      "type": "EventBuilder",
+      "name": "eventbuilder01",
+      "settings": {},
+      "connections": {
+        "receivers": [
+          {
+            "type": "ZMQPubSub",
+            "chid": 0,
+            "connections":[
+              {
+                "transport": "tcp",
+                "host": "localhost",
+                "port": 8101
+              }
+            ],
+            "queue": {
+              "type": "FollyProducerConsumer",
+              "queue_size": 1000
+            }
+          },
+          {
+            "type": "ZMQPair",
+            "chid": 1,
+            "transport": "tcp",
+            "host": "localhost",
+            "port": 8102,
+            "queue": {
+              "type": "FollyProducerConsumer",
+              "queue_size": 1000
+            }
+          }
+        ],
+        "senders": [
+          {
+            "type": "ZMQPair",
+            "chid": 0,
+            "transport": "ipc",
+            "path": "/tmp/feed3",
+            "queue": {
+              "type": "FollyProducerConsumer",
+              "queue_size": 1000
+            }
+          }
+        ]
+      }
+    }],
+    "metrics_settings": {
+      "influxDb_uri": "http://localhost:8086/write?db=",
+      "influxDb_name": "DAQlingMetrics"
+    },
+    "loglevel": {
+      "core": "INFO",
+      "module": "INFO",
+      "connection": "WARNING"
+    }
+    },
+    {
+      "name": "filewriter01",
+      "host": "localhost",
+      "port": 5561,
+      "modules":[{
+      "type": "FileWriter",
+      "name":"filewriter01",
+      "settings": {
+        "filename_pattern": "/tmp/test-%D.%r.%c.%n.bin"
+      },
+      "connections": {
+        "receivers": [
+          {
+            "type": "ZMQPair",
+            "chid": 0,
+            "transport": "ipc",
+            "path": "/tmp/feed3",
+            "queue": {
+              "type": "FollyProducerConsumer",
+              "queue_size": 1000
+            }
+          }
+        ]
+      }
+    }],
+    "metrics_settings": {
+      "influxDb_uri": "http://localhost:8086/write?db=",
+      "influxDb_name": "DAQlingMetrics"
+    },
+    "loglevel": {
+      "core": "INFO",
+      "module": "INFO",
+      "connection": "WARNING"
+    }
+    }
+  ]
+}

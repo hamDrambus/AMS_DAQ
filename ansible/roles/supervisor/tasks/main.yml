@@ -1,0 +1,47 @@
+- name: Open port 9001 on firewalld for supervisor web/XML-RPC Interface
+  firewalld:
+    zone: public
+    port: 9001/tcp
+    permanent: true
+    state: enabled
+  notify:
+    - restart firewalld
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- name: Install supervisor
+  pip:
+    name: supervisor
+    executable: pip3
+
+- name: Copy supervisor configuration file
+  copy:
+    src: supervisord.conf
+    dest: /etc/supervisor/
+
+- name: Copy supervisor inet configuration file
+  copy:
+    src: inet_http_server.conf
+    dest: /etc/supervisor/conf.d/
+
+- name: Create supervisor log file
+  file:
+    path: /var/log/supervisor
+    state: directory
+
+- name: Copy supervisor systemd service file
+  copy:
+    src: supervisord.service
+    dest: /etc/systemd/system/
+
+- name: Enabling supervisord service
+  systemd:
+    name: supervisord
+    enabled: yes
+    daemon_reload: yes
+  notify:
+    - restart supervisord
+
+- name: Create /log folder
+  file:
+    path: /log
+    state: directory

@@ -1,0 +1,44 @@
+- name: Install python3-devel [CentOS]
+  become: yes
+  package:
+    name: python3-devel
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- name: Install python3-dev [Ubuntu]
+  package:
+    name: python3-dev
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Update pip
+  command:
+    cmd: python3 -m pip install --upgrade pip
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Install virtual-env
+  package:
+    name: python3-venv
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Install importlib-metadata (for virtual-env)
+  pip:
+    name: "{{packages}}"
+    executable: pip3
+  vars:
+    packages:
+    - importlib-metadata
+
+- name: Manually create the initial virtualenv
+  become: no
+  command:
+    cmd: python3 -m venv "{{base_dir}}/etc/daqling_venv" 
+    creates: "{{base_dir}}/etc/daqling_venv"
+  vars:
+    base_dir: "{{ lookup('env','DAQLING_LOCATION') }}"
+
+- name: Install control python deps
+  pip:
+    requirements: "{{base_dir}}/etc/control-requirements.txt"
+    virtualenv: "{{base_dir}}/etc/daqling_venv"
+
+  vars:
+    base_dir: "{{ lookup('env','DAQLING_LOCATION') }}"

@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <!-- <h1>{% block title %}{% endblock %}</h1> -->
+    <script src="{{url_for('static', filename='js/jsoneditor.js')}}"></script>
+    <script src="{{url_for('static', filename='js/jquery-3.5.1.min.js')}}"></script>
+    <script src="{{url_for('static', filename='js/create.js')}}"></script>
+    <!-- Gives access to the url parameter "currentFileName" to the javascript scipt -->
+    <meta id="fileName" data-name="{{request.args.get('currentFileName')}}">
+    <script> let currentFileName = $('#fileName').data()["name"]</script>
+{% endblock %}
+
+{% block content %}
+    <!-- New module menu using spectre modal-->
+    <div class="modal modal-sm" id="newModule"><a class="modal-overlay" href="#modals" aria-label="Close"></a>
+        <div class="modal-container" role="document">
+            <div class="modal-header"><a class="btn btn-clear float-right" href="#modals" aria-label="Close"></a>
+                <div class="modal-title h5">New module</div>
+            </div>
+            <div class="modal-body">
+                <div class="content">
+                    <div id="json-editor-form2"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id='newElts' onclick='submitNewModule();document.getElementById("modal-close").click()'>Add new module</button><a class="btn btn-link" href="#modals" id="modal-close">Close</a>
+            </div>
+        </div>
+    </div>
+    <!-- End of new module menu -->
+
+    <!-- New multiple modules menu-->
+    <div class="modal modal-sm" id="newMultiModule"><a class="modal-overlay" href="#modals" aria-label="Close"></a>
+        <div class="modal-container" role="document">
+            <div class="modal-header"><a class="btn btn-clear float-right" href="#modals" aria-label="Close"></a>
+                <div class="modal-title h5">New modules</div>
+            </div>
+            <div class="modal-body">
+                <div class="content">
+                    <div id="json-editor-form3"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id='newElts' onclick='submitNewMultiModules();document.getElementById("modal-close").click()'>Add new modules</button><a class="btn btn-link" href="#modals" id="modal-close">Close</a>
+            </div>
+        </div>
+    </div>
+    <!-- End of new multiple module menu -->
+
+    <a class="d-hide" href="#newConnection" id="newConnectionLink"></a>
+    <!-- New connection menu using spectre modal -->
+    <div class="modal" id="newConnection"><a class="modal-overlay" onClick="cancelConnection();" href="#modals" aria-label="Close"></a>
+        <div class="modal-container" role="document">
+            <div class="modal-header"><a class="btn btn-clear float-right" onClick="cancelConnection();" href="#modals" aria-label="Close"></a>
+                <div class="modal-title h5">New connection</div>
+            </div>
+            <div class="modal-body">
+                <div id="json-editor-form"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id='newElts' onclick='submitNewConnection();document.getElementById("modal-close").click()'>Add new connection</button><a class="btn btn-link" onClick="cancelConnection();" href="#modals" id="modal-close">Close</a>
+            </div>
+        </div>
+    </div>
+    <!-- End of new connection menu -->
+    
+    <!-- Resizes canvas using spectre modal-->
+    <div class="modal modal-sm" id="resizeCanvasModal"><a class="modal-overlay" href="#modals" aria-label="Close"></a>
+        <div class="modal-container" role="document">
+            <div class="modal-header"><a class="btn btn-clear float-right" href="#modals" aria-label="Close"></a>
+                <div class="modal-title h5">Resizes whiteboard</div>
+            </div>
+            <div class="modal-body">
+                <div class="content">
+                    <label class="form-label" for="canvasWidth">Width</label>
+                    <input class="form-input" type="text" name="width" id="canvasWidth" onfocus="this.value=''">
+                    <label class="form-label" for="canvasHeight">Height</label>
+                    <input class="form-input" type="text" name="height" id="canvasHeight" onfocus="this.value=''">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id='submitResize' onclick='document.getElementById("modal-close").click()'>Resize</button><a class="btn btn-link" href="#modals" id="modal-close">Close</a>
+            </div>
+        </div>
+    </div>
+    <!-- End of resizes canvas-->
+    <div class="flex-centered">
+        <!-- New module -->
+        <div class="mx-2">
+        <a class="btn btn-primary" id="newModuleButton" href="#newModule"><i class="icon icon-plus"></i> Module</a>
+            <div class="d-none" id="popover1">
+                <a class="btn btn-primary" href="#newModule"><i class="icon icon-plus"></i> Module</a>
+                <div class="popover-container">
+                    <div class="card">
+                        <div class="card-body">
+                            Adds a new module to the canvas. The user has to fill the module name, host and type. The module is not written on the JSON configuration file before the user submits the file on the edit JSON page.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- New multi-module -->
+        <div class="mx-2">
+        <a class="btn btn-primary" id="newMultiModuleButton" href="#newMultiModule"><i class="icon icon-plus"></i> Multiple modules</a>
+            <div class="d-none" id="popover5">
+                <a class="btn btn-primary" href="#newMultiModule"><i class="icon icon-plus"></i> Multiple modules</a>
+                <div class="popover-container">
+                    <div class="card">
+                        <div class="card-body">
+                            Adds multiple modules to the canvas. The user has to fill the host and the type, the name is automatically generated with the type. The host will be the same for all the modules and can be changed using the JSON form.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mx-2">
+            <a class="btn btn-primary" id="editJSONButton" onclick='saveModulesPosition(currentFileName);' href="{{ url_for('input.editModule',currentFileName=request.args.get('currentFileName')) }}"><i class="icon icon-edit"></i> JSON</a>
+            <div class="d-none" id="popover2">
+                <a class="btn btn-primary" onclick='saveModulesPosition(currentFileName);' href="{{ url_for('input.editModule',currentFileName=request.args.get('currentFileName')) }}"><i class="icon icon-edit"></i> JSON</a>
+                <div class="popover-container">
+                    <div class="card">
+                        <div class="card-body">
+                            Opens a JSON editor that allows the user to modify the configuration file and to submit it.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mx-2">
+            <a class="btn btn-primary" href="#resizeCanvasModal" id="canvasSize"><i class="icon icon-resize-horiz"></i> Whiteboard size</a>
+            <div class="d-none" id="popover4">
+                <a class="btn btn-primary" href="#resizeCanvasModal" id="canvasSize"><i class="icon icon-resize-horiz"></i> Whiteboard size</a>
+                <div class="popover-container">
+                    <div class="card">
+                        <div class="card-body">
+                            Opens a window to allow the user to resize manually the whiteboard
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mx-2">
+            <a class="btn btn-primary" id="menuButton" href="{{ url_for('initPage.index',currentFileName=request.args.get('currentFileName')) }}"><i class="icon icon-menu"></i> Menu</a>
+            <div class="d-none" id="popover3">
+                <a class="btn btn-primary" href="{{ url_for('initPage.index',currentFileName=request.args.get('currentFileName')) }}"><i class="icon icon-menu"></i> Menu</a>
+                <div class="popover-container">
+                    <div class="card">
+                        <div class="card-body">
+                            Goes back on the menu where the user can change the file eddited or starts a new one.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mx-2">
+            <button class="btn btn-primary" id="helpButton"><i class="icon icon-search"></i> Help</button>
+        </div>
+        <!-- Draggable DIV -->
+    </div>
+    <canvas id="canvas"></canvas>
+    <script src="{{url_for('static', filename='js/drag.js')}}"></script>
+{% endblock %}

@@ -1,0 +1,44 @@
+
+- name: Add MongoDB repository
+  yum_repository:
+    name: mongodb-org-4.2
+    description: MongoDB repository
+    baseurl: https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/4.2/x86_64/
+    enabled: yes
+    gpgcheck: 1
+    repo_gpgcheck: 1
+    gpgkey: https://www.mongodb.org/static/pgp/server-4.2.asc
+
+- name: Install MongoDB v4.2
+  yum:
+    name: mongodb-org
+    state: latest 
+
+- name: Copy over mongod config
+  copy:
+    src: mongod.conf
+    dest: /etc/mongod.conf
+
+- name: Install SELinux policy compiler
+  yum:
+    name: checkpolicy
+    state: latest
+
+- name: Copy over policy (SELinux MongoDB)
+  copy:
+    src: mongodb_cgroup_memory.te
+    dest: /opt/mongodb_cgroup_memory.te
+
+- name: Check module (SELinux MongoDB)
+  shell: checkmodule -M -m -o /opt/mongodb_cgroup_memory.mod /opt/mongodb_cgroup_memory.te
+
+- name: Package module (SELinux MongoDB)
+  shell: semodule_package -o /opt/mongodb_cgroup_memory.pp -m /opt/mongodb_cgroup_memory.mod
+
+- name: Install module (SELinux MongoDB)
+  shell: semodule -i /opt/mongodb_cgroup_memory.pp
+
+- systemd:  name=mongod enabled=no daemon_reload=yes
+- systemd:  name=mongod enabled=yes
+- systemd:  name=mongod state=restarted 
+

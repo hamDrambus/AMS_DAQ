@@ -1,0 +1,21 @@
+{
+  "version": 5,
+  "group": "daq",
+  "components": [
+    {
+      "name": "dummy01",
+      "host": "localhost",
+      "port": 5555,
+      "modules":[{
+        "name": "dummy01",
+        "type": "Dummy",
+        "settings": {
+        },
+        "connections": {
+        }
+      }],
+      "loglevel": {"core": "INFO", "module": "DEBUG"}
+    }
+  ]
+}
+

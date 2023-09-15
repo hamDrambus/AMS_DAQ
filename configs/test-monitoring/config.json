@@ -1,0 +1,24 @@
+{
+  "version": 6,
+  "group": "daq",
+  "components": [
+    {
+      "name": "metricssimulator",
+      "host": "localhost",
+      "port": 5555,
+      "modules":[{
+        "name": "metricssimulator",
+        "type": "MetricsSimulator",
+        "settings": {
+          "stats_uri": "tcp://localhost:6007",
+          "influxDb_uri": "http://localhost:8086/write?db=",
+          "influxDb_name": "DAQlingMetrics"
+        },
+        "connections": {
+        }
+      }],
+      "loglevel": {"core": "INFO", "module": "DEBUG","connection":"WARNING"}
+    }
+  ]
+}
+

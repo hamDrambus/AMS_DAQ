@@ -1,0 +1,23 @@
+{
+    "version": 11,
+    "group": "daq",
+    "components": [
+      {
+        "name": "ersTester1",
+        "modules":[{
+          "name": "ersTester1",
+          "type": "ErsTest",
+          "connections": {
+          },
+          "settings": {
+          }
+        }],
+        "loglevel": {"core": "DEBUG", "module": "DEBUG", "connection": "WARNING"},
+        "host": "localhost",
+        "port": 5555
+      }
+      
+    ]
+  }
+  
+  

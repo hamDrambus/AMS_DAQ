@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <!-- <h1>{% block title %}{% endblock %}</h1> -->
+{% endblock %}
+
+{% block content %}
+    <script>0</script>
+    <form method="post" id="form1">
+        <input name="actionType" id="actionTypeNew" value="New" class="d-none">
+        <input class="d-hide" type="text" name="fileName" id="fileNameNew" value="dummyFile.json">
+    </form>
+    <div class="columns d-invisible"> padding </div>
+    <div class="columns d-invisible"> padding </div>
+    <div class="columns d-invisible"> padding </div>
+    <div class="columns flex-centered">
+        <button class="btn btn-primary btn-lg" id="newConfigFile" type="submit" form="form1" value="Submit"><i class="icon icon-plus"></i> New configuration file</button>
+        <div class="d-none" id="popover1">
+            <button class="btn btn-primary btn-lg" type="submit" form="form1" value="Submit"><i class="icon icon-plus"></i> New configuration file</button>
+            <div class="popover-container">
+                <div class="card">
+                    <div class="card-body">
+                        Initializes a new blank configuration file. It will erases all the non-saved changes on the file edited previously.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="columns d-invisible"> padding </div>
+    <div class="columns flex-centered">
+        <a class="btn btn-primary btn-lg" id="editConfigFile" href="#editModule"><i class="icon icon-edit"></i> Edit configuration file</a>
+        <div class="d-none" id="popover2">
+            <a class="btn btn-primary btn-lg" href="#editModule"><i class="icon icon-edit"></i> Edit configuration file</a>
+            <div class="popover-container">
+                <div class="card">
+                    <div class="card-body">
+                        Lists the files located in the directory given by the DAQ_CONFIGS_DIR variable and allows the user to select one of them to modify it.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Menu to sleect the file to be eddited -->
+        <div class="modal modal-sm" id="editModule"><a class="modal-overlay" href="#modals" aria-label="Close"></a>
+            <div class="modal-container" role="document">
+                <div class="modal-header"><a class="btn btn-clear float-right" href="#modals" aria-label="Close"></a>
+                    <div class="modal-title h5">Edit configuration file</div>
+                </div>
+                <div class="modal-body">
+                    <div class="content">
+                        <form method="post" id="form2">
+                            <input name="actionType" id="actionTypeEdit" value="Edit" class="d-none">
+                            <!-- Jinja template to list the files in the directory -->
+                            {% for files in jsonFiles %}
+                            <label class="form-radio">
+                                <input type="radio" name="fileName" value={{files}}>
+                                <i class="form-icon"></i> {{files}}
+                            </label>
+                            {% endfor %}
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary btn-lg" type="submit" form="form2" value="Submit">Submit</button><a class="btn btn-link" href="#modals">Close</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="columns d-invisible"> padding </div>
+    <div class="columns flex-centered">
+        <!-- ________________________________________________________________ -->
+        <a class="btn btn-primary btn-lg" id="selectSchemaFile" href="#selectSchema"><i class="icon icon-more-vert"></i> Select schema</a>
+        <div class="d-none" id="popover4">
+            <a class="btn btn-primary btn-lg" href="#selectSchema"><i class="icon icon-more-vert"></i> Select schema</a>
+            <div class="popover-container">
+                <div class="card">
+                    <div class="card-body">
+                        Lists the schemas located in the sub-directory "schema" given by the DAQ_CONFIGS_DIR variable and allows the user to select one of them to modify it.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Menu to sleect the schema to be used -->
+        <div class="modal modal-sm" id="selectSchema"><a class="modal-overlay" href="#modals" aria-label="Close"></a>
+            <div class="modal-container" role="document">
+                <div class="modal-header"><a class="btn btn-clear float-right" href="#modals" aria-label="Close"></a>
+                    <div class="modal-title h5">Select schema</div>
+                </div>
+                <div class="modal-body">
+                    <div class="content">
+                        <form method="post" id="form3">
+                            <!-- <input name="actionType" id="actionTypeSelectSchema" value="Select" class="d-none"> -->
+                            <!-- Jinja template to list the files in the directory -->
+                            {% for files in schemaFiles %}
+                            <label class="form-radio">
+                                <input type="radio" name="fileName" value={{files}}>
+                                <i class="form-icon"></i> {{files}}
+                            </label>
+                            {% endfor %}
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-primary btn-lg" href="#modals" id="submitSchema" value="Submit">Submit</a><a class="btn btn-link" href="#modals">Close</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="columns d-invisible"> padding </div>
+    <div class="columns flex-centered">
+        <a class="btn btn-primary btn-lg" id="editPrevFile" href="{{ url_for('initPage.canvas',currentFileName=request.args.get('currentFileName')) }}"><i class="icon icon-edit"></i> Edit previous file</a>
+        <div class="d-none" id="popover3">
+            <a class="btn btn-primary btn-lg" href="{{ url_for('initPage.canvas',currentFileName=request.args.get('currentFileName')) }}"><i class="icon icon-edit"></i> Edit previous file</a>
+            <div class="popover-container">
+                <div class="card">
+                    <div class="card-body">
+                        Opens the file that was previously edited.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="columns d-invisible"> padding </div>
+    <div class="columns flex-centered">
+        <button class="btn btn-primary btn-lg" id="helpButton"><i class="icon icon-search"></i> Help</button>
+    </div>
+    <div class="columns d-invisible"> padding </div>
+    <div class="columns d-invisible"> padding </div>
+    <div class="columns d-invisible"> padding </div>
+    <div class="columns d-invisible"> padding </div>
+    <div class="flex-centered">
+        <img src="{{url_for('static', filename='assets/images/Logo-Outline-web-Blue@200.png')}}" class="img-fit-contain" alt="CERN logo">
+    </div>
+    <script src="{{url_for('static', filename='js/menu.js')}}"></script>
+{% endblock %}

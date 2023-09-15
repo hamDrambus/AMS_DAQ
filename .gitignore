@@ -1,0 +1,9 @@
+build
+*.code-workspace
+.vscode
+*pyc
+.env
+cmake/setup.cfg
+etc/daqling_venv
+tmp/**
+log/**

@@ -1,0 +1,19 @@
+- name: Install Twiddler
+  pip:
+    name: supervisor_twiddler
+    executable: pip3
+
+- name: Copy twiddler gui configuration file
+  copy:
+    src: twiddler.conf
+    dest: /etc/supervisor/conf.d/
+    force: no
+  notify:
+    - restart supervisord
+
+- name: add cronjob to clear 30-days-old logs from /log folder every day
+  cron:
+    name: "remove old logs"
+    minute: "0"
+    hour: "0"
+    job: "find /log/ -type f -name '*.log' -mtime +30 -exec rm {} \\; >/dev/null 2>&1"

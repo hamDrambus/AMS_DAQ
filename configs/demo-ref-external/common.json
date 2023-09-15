@@ -1,0 +1,21 @@
+{
+    "common": {
+        "loglevel": {
+            "core": "WARNING",
+            "module": "INFO",
+            "connection": "WARNING"
+        },
+        "metrics_settings": {
+            "influxDb_uri": "http://localhost:8086/write?db=",
+            "influxDb_name": "DAQlingMetrics"
+        },
+        "readoutinterface": {
+            "type": "ReadoutInterface",
+            "delay_us": 100000,
+            "payload": {
+                "min": 200,
+                "max": 1500
+            }
+        }
+    }
+}

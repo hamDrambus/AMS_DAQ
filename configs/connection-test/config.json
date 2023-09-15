@@ -1,0 +1,72 @@
+{
+  "version": 11,
+  "group": "daq",
+  "components": [
+    {
+      "name": "readoutinterface01",
+      "host": "localhost",
+      "port": 5555,
+      "modules":[{
+        "name": "readoutinterface01",
+        "type": "ReadoutInterface",
+      "settings": {
+        "board_id": 0,
+        "delay_us": 100000,
+        "payload": {"min": 200, "max": 1500}
+      },
+      "connections": {
+        "senders": [
+          {
+            "type": "BoostAsioUdp",
+            "chid": 0,
+            "transport": "udp",
+            "host": "127.0.0.1",
+            "dest_port": 8101,
+            "queue":{
+              "type":"FollyProducerConsumer",
+              "queue_size":1000
+            }
+          }
+        ]
+      }
+      }],
+      "loglevel": {"core": "DEBUG", "module": "DEBUG", "connection": "WARNING"},
+      "metrics_settings": {}
+
+      
+    },
+    {
+      "name": "filewriter01",
+      "host": "localhost",
+      "port": 5561,
+      "modules":[{
+        "name": "filewriter01",
+        "type": "FileWriter",
+        "settings": {
+          "filename_pattern": "/tmp/test-%D.%r.%c.%n.bin"
+        },
+        "connections": {
+          "receivers": [
+            {
+              "type": "BoostAsioUdp",
+              "chid": 0,
+              "transport": "udp",
+              "dest_port": 8101,
+              "host":"127.0.0.1",
+              "queue":{
+                "type":"FollyProducerConsumer",
+                "queue_size":1000
+              }
+            }
+          ]
+        }
+      }],
+      "loglevel": {"core": "DEBUG", "module": "DEBUG", "connection": "WARNING"},
+      "metrics_settings": {}
+
+      
+    }
+    
+  ]
+}
+

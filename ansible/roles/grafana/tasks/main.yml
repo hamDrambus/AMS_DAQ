@@ -1,0 +1,68 @@
+- name: Install Grafana
+  yum:
+    name: https://dl.grafana.com/oss/release/grafana-8.5.0-1.x86_64.rpm
+    disable_gpg_check: yes
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+    
+- name: Install Grafana
+  apt:
+    deb: https://dl.grafana.com/oss/release/grafana_8.5.0_amd64.deb
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'   
+
+- name: Open port 3000 on firewalld for Grafana
+  firewalld:
+    zone: public
+    port: 3000/tcp
+    permanent: true
+    state: enabled
+  notify:
+    - restart firewalld
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+# - name: Create influxdb datasource
+#   grafana_datasource:
+#     name: "DAQlingMetrics"
+#     grafana_url: "http://localhost:3000"
+#     ds_type: "influxdb"
+#     ds_url: "http://localhost:8086"
+#     database: "DAQlingMetrics"
+#     time_interval: ">1s"
+
+- name: Copy influxdb datasource config
+  copy:
+    src: DAQlingMetrics.yaml
+    dest: /etc/grafana/provisioning/datasources
+    group: grafana
+
+# - name: Import Grafana dashboard
+#   grafana_dashboard:
+#     grafana_url: "http://localhost:3000"
+#     state: present
+#     path: Demo.json
+
+- name: Create /var/lib/grafana/dashboards folder
+  file:
+    path: /var/lib/grafana/dashboards
+    state: directory
+    owner: grafana
+    group: grafana
+
+- name: Copy dashboard
+  copy:
+    src: Demo.json
+    dest: /var/lib/grafana/dashboards
+    owner: grafana
+    group: grafana
+
+- name: Copy default dashboard provider config
+  copy:
+    src: default.yaml
+    dest: /etc/grafana/provisioning/dashboards
+    group: grafana
+
+- name: Enable and restart Grafana service
+  systemd:
+    name: grafana-server
+    enabled: yes
+    daemon_reload: yes
+    state: restarted

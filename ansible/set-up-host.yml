@@ -1,0 +1,12 @@
+- hosts: localhost
+  remote_user: "{{ lookup('env','LOGNAME') }}"
+  become: yes
+  become_method: sudo
+  roles:
+    - { role: packages, tags: minimal' }
+    - supervisor-twiddler
+    - { role: openhpc, tags: minimal, when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '7' }
+    - { role: control-deps, tags: minimal }
+  environment:
+    http_proxy: "{{ lookup('env','http_proxy') }}" 
+    https_proxy: "{{ lookup('env','https_proxy') }}" 

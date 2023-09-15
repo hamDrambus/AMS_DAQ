@@ -1,0 +1,41 @@
+- name: Install InfluxDB
+  yum:
+    name: https://dl.influxdata.com/influxdb/releases/influxdb-1.8.10.x86_64.rpm
+    disable_gpg_check: yes
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+  
+- name: Install InfluxDB
+  apt:
+    deb: https://dl.influxdata.com/influxdb/releases/influxdb_1.8.10_amd64.deb
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'    
+
+- name: Open port 8086 on firewalld for InfluxDB's HTTP API
+  firewalld:
+    zone: public
+    port: 8086/tcp
+    permanent: true
+    state: enabled
+  notify:
+    - restart firewalld
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- name: Enable and restart InfluxDB service
+  systemd:
+    name: influxdb
+    enabled: yes
+    daemon_reload: yes
+    state: restarted
+
+- name: Install influxdb python module
+  pip:
+    name: "{{packages}}"
+    executable: pip3
+  vars:
+    packages:
+    - influxdb
+
+- name: Create DAQlingMetrics database
+  influxdb_database:
+    hostname: "localhost"
+    database_name: "DAQlingMetrics"
+

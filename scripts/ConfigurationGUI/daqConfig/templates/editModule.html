@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <!-- <h1>{% block title %}Edit module{% endblock %}</h1> -->
+  <script src="{{url_for('static', filename='js/jsoneditor.js')}}"></script>
+  <script src="{{url_for('static', filename='js/jquery-3.5.1.min.js')}}"></script>
+  <!-- Gives access to the url parameter "currentFileName" to the javascript scipt -->
+  <meta id="fileName" data-name="{{request.args.get('currentFileName')}}">
+  <script> let currentFileName = $('#fileName').data()["name"]</script>
+  <noscript>Your browser does not support JavaScript</noscript>
+{% endblock %}
+
+{% block content %}
+<div class="flex-centered">
+    <div class="mx-2">
+        <button class="btn btn-primary submitButton" id="submit"><i class="icon icon-upload"></i> Submit</button> <!-- Submit the JSON file to be written on the disk -->
+        <div class="d-none" id="popover1">
+            <button class="btn btn-primary submitButton" id="submit2"><i class="icon icon-upload"></i> Submit</button>
+            <div class="popover-container">
+                <div class="card">
+                    <div class="card-body">
+                        Submits the JSON file to be written on the disk. The button is disabled if the file is not valid. If the configuration file is new, the user has to input the name of the file.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mx-2">
+    <a class="btn btn-success" href="#validationInfo" id="validationField"><i id="validIcon" class="icon icon-check"></i> Validation</a>
+    <div class="d-none" id="popover2">
+        <a class="btn btn-success" href="#validationInfo" id="validationField2"><i id="validIcon2" class="icon icon-check"></i> Validation</a>
+        <div class="popover-container">
+            <div class="card">
+                <div class="card-body">
+                    Indicates if the JSON file is valid. Green means valid, red means not valid. The user can click on the button to display the errors.
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    <div class="modal" id="validationInfo"><a class="modal-overlay" href="#modals" aria-label="Close"></a>
+        <div class="modal-container" role="document">
+            <div class="modal-header"><a class="btn btn-clear float-right" href="#modals" aria-label="Close"></a>
+                <div class="modal-title h5">Validation errors</div>
+            </div>
+            <div class="modal-body">
+                <div class="content">
+                    <textarea class="form-input" id='validate-textarea' readonly disabled></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-link" href="#modals">Close</a>
+            </div>
+        </div>
+    </div>
+    <span class="d-hide mx-2" id="textSubmission">File submitted</span>
+    <div class="mx-2">
+        <a class="btn btn-primary" id='returnToCanvas' href="{{ url_for('initPage.canvas',currentFileName=request.args.get('currentFileName')) }}"><i class="icon icon-apps"></i> Whiteboard</a>
+        <div class="d-none" id="popover3">
+            <a class="btn btn-primary" id='returnToCanvas2' href="{{ url_for('initPage.canvas',currentFileName=request.args.get('currentFileName')) }}"><i class="icon icon-apps"></i> Whiteboard</a>
+            <div class="popover-container">
+                <div class="card">
+                    <div class="card-body">
+                        Returns to the whiteboard to edit the current file. The changes applied on the editor will be drawn on the GUI.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mx-2">
+        <a class="btn btn-primary" id="menuButton" href="{{ url_for('initPage.index',currentFileName=request.args.get('currentFileName')) }}"><i class="icon icon-menu"></i> Menu</a>
+        <div class="d-none" id="popover4">
+            <a class="btn btn-primary" href="{{ url_for('initPage.index',currentFileName=request.args.get('currentFileName')) }}"><i class="icon icon-menu"></i> Menu</a>
+            <div class="popover-container">
+                <div class="card">
+                    <div class="card-body">
+                        Goes back on the menu where the user can change the file eddited or starts a new one.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- New file name menu using spectre modal -->
+    <a class="d-none" href="#writeJSONFile" id="hiddenSubmit"></a>
+    <div class="modal modal-sm" id="writeJSONFile"><a class="modal-overlay" href="#modals" aria-label="Close"></a>
+        <div class="modal-container" role="document">
+            <div class="modal-header"><a class="btn btn-clear float-right" href="#modals" aria-label="Close"></a>
+                <div class="modal-title h5">Configuration file name</div>
+            </div>
+            <div class="modal-body">
+                <div class="content">
+                    <label class="form-label" for="fileNameNew">File name</label>
+                    <input class="form-input" type="text" id="fileNameNew">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="submitNewJSON">Write file</button><a class="btn btn-link" href="#modals">Close</a>
+            </div>
+        </div>
+    </div>
+    <!-- End new file name menu -->
+    <div class="mx-2">
+        <button class="btn btn-primary" id="helpButton"><i class="icon icon-search"></i> Help</button>
+    </div>
+</div>
+<div id="json-editor-form"></div>
+<script src="{{url_for('static', filename='js/input.js')}}"></script>
+{% endblock %}

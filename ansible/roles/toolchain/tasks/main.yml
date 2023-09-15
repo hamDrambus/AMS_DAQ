@@ -1,0 +1,51 @@
+#
+# Filename: roles/toolchain/tasks/main.yml
+# Author  : Roland Sipos - rsipos@cern.ch
+# Maintainer: DAQling developers
+# 
+# ---
+
+- name: Ensure that the toolchain destination exists "{{toolchain_dir}}"
+  file:
+    path: "{{toolchain_dir}}"
+    state: directory
+
+- name: Wget Linaro toolchain from "{{toolchain_url}}"
+  get_url: 
+    url: "{{toolchain_url}}/{{toolchain_arch}}/{{toolchain_name}}.tar.xz"
+    dest: "{{toolchain_dir}}"
+
+- name: Extract tarball "{{toolchain_name}}.tar.xz"
+  unarchive:
+    src: "{{toolchain_dir}}/{{toolchain_name}}.tar.xz"
+    dest: "{{toolchain_dir}}/"
+
+- name: Copy toolchain setup file to "{{toolchain_dir}}"
+  copy:
+    src: setup.sh
+    dest: "{{toolchain_dir}}/setup-{{toolchain_arch}}.sh"
+
+- name: Modify export LD_LIBRARY_PATH
+  lineinfile:
+    path: "{{toolchain_dir}}/setup-{{toolchain_arch}}.sh"
+    regexp: '^#export LD_LIBRARY_PATH='
+    line: 'export LD_LIBRARY_PATH={{toolchain_dir}}/{{toolchain_name}}/lib:$LD_LIBRARY_PATH'
+
+- name: Modify export PATH
+  lineinfile:
+    path: "{{toolchain_dir}}/setup-{{toolchain_arch}}.sh"
+    regexp: '^#export PATH='
+    line: 'export PATH={{toolchain_dir}}/{{toolchain_name}}/bin:$PATH'
+
+- name: Modify export CC
+  lineinfile:
+    path: "{{toolchain_dir}}/setup-{{toolchain_arch}}.sh"
+    regexp: '^#export CC='
+    line: 'export CC={{toolchain_dir}}/{{toolchain_name}}/bin/{{toolchain_arch}}-gcc'
+
+- name: Modify export CXX
+  lineinfile:
+    path: "{{toolchain_dir}}/setup-{{toolchain_arch}}.sh"
+    regexp: '^#export CXX='
+    line: 'export CXX={{toolchain_dir}}/{{toolchain_name}}/bin/{{toolchain_arch}}-g++'
+

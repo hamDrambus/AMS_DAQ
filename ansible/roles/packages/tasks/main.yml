@@ -1,0 +1,7 @@
+- name: Install packages
+  package:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - doxygen
+    - python3-pip

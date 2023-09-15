@@ -1,0 +1,75 @@
+stages:
+    - build-image
+    - compilation
+    - testing
+
+
+build:
+  stage: build-image
+  image:
+    name: gitlab-registry.cern.ch/ci-tools/docker-image-builder
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/etc/Dockerfile --destination $CI_REGISTRY_IMAGE:cc7
+  only:
+    - triggers
+    # variables:
+    #     - $TRIGGER_PAYLOAD == "DAQLING_SPACK_REPO_HOOK"
+
+
+# Default compile jobs
+compile:
+    image: gitlab-registry.cern.ch/ep-dt-di/daq/daqling:cc7
+    stage: compilation
+    script:
+        - mkdir build
+        - cd build
+        - cmake -DENABLE_SANITIZE=OFF -DBUILD_Dummy=ON ..
+        - make -j$(nproc)
+    artifacts:
+        paths:
+            - build
+        expire_in: 1 hours
+    before_script:
+        - ./cmake/install.sh -d /daqling-spack-repo -c configs/ -a
+        - source cmake/setup.sh
+
+# Default tests
+test:
+    image: gitlab-registry.cern.ch/ep-dt-di/daq/daqling:cc7
+    stage: testing
+    script:
+        - cd build/
+        - ctest --output-on-failure -j4
+    dependencies:
+        - compile
+    before_script:
+        - ./cmake/install.sh -d /daqling-spack-repo -c configs/ -a
+        - source cmake/setup.sh
+
+format:
+    image: gitlab-registry.cern.ch/ep-dt-di/daq/daqling:cc7
+    stage: testing
+    script:
+        - cd build
+        - make check-format
+    dependencies:
+        - compile
+    before_script:
+        - ./cmake/install.sh -d /daqling-spack-repo -c configs/ -a
+        - source cmake/setup.sh
+    allow_failure: true
+tidy:
+    image: gitlab-registry.cern.ch/ep-dt-di/daq/daqling:cc7
+    stage: testing
+    script:
+        - cd build
+        - make check-lint
+    dependencies:
+        - compile
+    before_script:
+        - ./cmake/install.sh -d /daqling-spack-repo -c configs/ -a
+        - source cmake/setup.sh
+    allow_failure: true

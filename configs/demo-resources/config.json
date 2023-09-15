@@ -1,0 +1,168 @@
+{
+    "version": 11,
+    "group": "daq",
+    "scripts": [
+        {
+            "name": "metric-manager",
+            "host": "localhost",
+            "executable": "metric-manager.py metrics-config.json",
+            "command": "python3",
+            "directory": "Monitoring/"
+        },
+        {
+            "name": "psutil-manager",
+            "host": "localhost",
+            "executable": "psutil-manager.py",
+            "command": "python3",
+            "directory": "Monitoring/"
+        }
+    ],
+    "components": [
+        {
+            "name": "Agregate01",
+            "host": "localhost",
+            "port": 5560,
+            "modules": [
+                {
+                    "name": "readoutinterface01",
+                    "type": "ReadoutInterface",
+                    "settings": {
+                        "board_id": 0,
+                        "delay_us": 100,
+                        "payload": {
+                            "min": 200,
+                            "max": 1500
+                        }
+                    },
+                    "connections": {
+                        "senders": [
+                            {
+                                "type": "ZMQPubSub",
+                                "chid": 0,
+                                "transport": "inproc",
+                                "id":1,
+                                "endpoint":"inproc#2",
+                                "queue": {
+                                    "type": "FollyProducerConsumer",
+                                    "queue_size": 1000
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "readoutinterface02",
+                    "type": "ReadoutInterface",
+                    "settings": {
+                        "board_id": 1,
+                        "delay_us": 100,
+                        "payload": {
+                            "min": 200,
+                            "max": 1500
+                        }
+                    },
+                    "connections": {
+                        "senders": [
+                            {
+                                "type": "ZMQPubSub",
+                                "chid": 0,
+                                "transport": "inproc",
+                                "id":1,
+                                "endpoint":"inproc#1",
+                                "queue": {
+                                    "type": "FollyProducerConsumer",
+                                    "queue_size": 1000
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "eventbuilder01",
+                    "type": "EventBuilder",
+                    "settings": {},
+                    "connections": {
+                        "receivers": [
+                            {
+                                "type": "ZMQPubSub",
+                                "chid": 0,
+                                "id":1,
+                                "connections": [
+                                    {
+                                        "transport":"inproc",
+                                        "endpoint":"inproc#2"
+                                    }
+                                ],
+                                "queue": {
+                                    "type": "FollyProducerConsumer",
+                                    "queue_size": 1000
+                                }
+                            },
+                            {
+                                "type": "ZMQPubSub",
+                                "chid": 1,
+                                "id":1,
+                                "connections": [
+                                    {
+                                        "transport":"inproc",
+                                        "endpoint":"inproc#1"
+                                    }
+                                ],
+                                "queue": {
+                                    "type": "FollyProducerConsumer",
+                                    "queue_size": 1000
+                                }
+                            }
+                        ],
+                        "senders": [
+                            {
+                                "type": "Local",
+                                "chid": 0,
+                                "id": 2
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "filewriter01",
+                    "type": "FileWriter",
+                    "settings": {
+                        "filename_pattern": "/tmp/test-%D.%r.%c.%n.bin"
+                    },
+                    "connections": {
+                        "receivers": [
+                            {
+                                "type": "Local",
+                                "chid": 0,
+                                "id": 2
+                            }
+                        ]
+                    }
+                }
+            ],
+            "resources": [
+                {
+                    "type": "zmq_context",
+                    "id": 1
+                },
+                {
+                    "type":"queue",
+                    "id":2,
+                    "resource":{
+                        "type":"FollyProducerConsumer",
+                        "data_type":"DataFragment<daqling::utilities::Binary>",
+                        "queue_size":1000
+                    }
+                }
+            ],
+            "loglevel": {
+                "core": "INFO",
+                "module": "INFO",
+                "connection": "WARNING"
+            },
+            "metrics_settings": {
+                "stats_uri": "tcp://localhost:6007"
+            }
+        }
+    ]
+}

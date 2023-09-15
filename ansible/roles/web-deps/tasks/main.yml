@@ -1,0 +1,16 @@
+- name: Install web python deps
+  pip:
+    requirements: "{{base_dir}}/etc/web-requirements.txt"
+    virtualenv: "{{base_dir}}/etc/daqling_venv"
+  vars:
+    base_dir: "{{ lookup('env','DAQLING_LOCATION') }}"
+
+- name: Open port 5000 on firewalld for Flask
+  firewalld:
+    zone: public
+    port: 5000/tcp
+    permanent: true
+    state: enabled
+  notify:
+    - restart firewalld
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'

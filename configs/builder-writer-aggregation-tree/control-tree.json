@@ -1,0 +1,21 @@
+{
+  "name": "Root",
+  "children": [
+    {
+      "name": "ReadoutInterfaces",
+      "types": [{"type":"RI"}],
+      "children": [
+        {
+          "name": "readoutinterface01"
+        },
+        {
+          "name": "readoutinterface02"
+        }
+      ]
+    },
+    {
+      "name": "builderWriterAggregate01",
+      "types": [{"type":"EB","qualified_types":["EventBuilder","FakeEventBuilder"]},{"type":"FW","qualified_types":"FileWriter"}]
+    }
+  ]
+}
