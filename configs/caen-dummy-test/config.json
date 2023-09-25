@@ -1,0 +1,82 @@
+{
+  "version": 11,
+  "group": "daq",
+  "components": [
+    {
+      "name": "CAEN_ADC_test",
+      "host": "localhost",
+      "port": 5555,
+      "modules":[{
+        "name": "CAEN_ADC_test",
+        "type": "CaenDummy",
+        "settings": {
+          "adc_max_amplitude": 4096,
+          "n_samples": {"min": 4000, "max": 5000},
+          "baseline": {"amplitude": 2000, "noise_amplitude": 60},
+          "signal": {
+            "probability": 0.90,
+            "amplitude": 400,
+            "amplitude_jitter": 10,
+            "duration": 500,
+            "duration_jitter": 30,
+            "position": 2200,
+            "position_jitter": 100
+          },
+          "delay_us": 5000000
+        },
+        "connections": {
+          "senders": [
+            {
+              "type": "ZMQPubSub",
+              "chid": 0,
+              "transport": "tcp",
+              "host": "*",
+              "port": 8101,
+              "queue":{
+                "type":"FollyProducerConsumer",
+                "queue_size":100
+              }
+            }
+          ]
+        }
+      }],
+      "loglevel": {"core": "WARNING", "module": "INFO", "connection": "WARNING"},
+      "metrics_settings": {}
+    },
+    {
+      "name": "CAEN_file_writer",
+      "host": "localhost",
+      "port": 5561,
+      "modules":[{
+        "name": "CAEN_file_writer",
+        "type": "CaenFileWriter",
+        "settings": {
+          "filename_pattern": "/home/fvirt/Documents/AMS_DAQ/DAQling/daqling-develop/tmp/test-%D.%r.%c.%n.txt",
+          "max_filesize": 1
+        },
+        "connections": {
+          "receivers": [
+            {
+              "type": "ZMQPubSub",
+              "chid": 0,
+              "connections":[
+                {
+                  "transport": "tcp",
+                  "host": "localhost",
+                  "port": 8101
+                }
+              ],
+              "queue":{
+                "type":"FollyProducerConsumer",
+                "queue_size":100
+              }
+            }
+          ]
+        }
+      }],
+      "loglevel": {"core": "WARNING", "module": "INFO", "connection": "WARNING"},
+      "metrics_settings": {}
+    }
+  ]
+}
+

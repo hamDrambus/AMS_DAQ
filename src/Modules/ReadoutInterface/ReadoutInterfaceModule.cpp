@@ -50,7 +50,8 @@ void ReadoutInterfaceModule::start(unsigned run_num) { DAQProcess::start(run_num
 void ReadoutInterfaceModule::stop() { DAQProcess::stop(); }
 
 void ReadoutInterfaceModule::runner() noexcept {
-  unsigned sequence_number = 0;
+  
+  uint32_t sequence_number = 0;
   microseconds timestamp{};
 
   std::random_device rd;

@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <functional>
 #include <iomanip>
 #include <vector>
@@ -43,6 +44,7 @@ public:
   enum class error_code {
     alloc,
     invalid_arg,
+    overflow,
   };
 
   /// Default Constructor. Creates an empty BLOB
@@ -141,8 +143,60 @@ public:
   /// Current size of the blob
   size_t size() const noexcept { return m_data.size(); }
 
+  /// Reserve memory for the blob
+  void reserve(size_t size) noexcept { m_data.reserve(size); }
+
+  /// Resize the memory to given size
+  void resize(size_t size) noexcept {
+    try {
+      m_data.resize(size);
+    } catch (const std::bad_alloc &) {
+      m_error = error_code::alloc;
+    }
+  }
+
+  /// Sets size to zero and resets the state
+  void clear() noexcept {
+    resize(0);
+    reset();
+  }
+
+  /// Resets the state
+  void reset() noexcept {
+    m_error = {};
+  }
+
   /// Returns whether or not the Binary is in a usable state or if an error occured
   [[nodiscard]] std::optional<error_code> error() const noexcept { return m_error; }
+
+  /// Copy 'num' bytes from 'source' buffer to the blob starting with 'dest' byte.
+  /// The blob will be expanded if necessary.
+  /// Returns index of the byte after the last written byte (new effective size).
+  size_t memwrite(size_t dest, const void* source, size_t num) {
+    size_t new_sz = dest + num;
+    if (new_sz < dest || new_sz < num)
+      throw std::overflow_error(std::string(__PRETTY_FUNCTION__) + ":\n\tread index overflowed size_t. " +
+          "Most likely the transfered data (byte buffer) is corrupted.");
+    if (new_sz > m_data.size())
+      m_data.resize(new_sz);
+    std::memcpy(reinterpret_cast<char *>(m_data.data()) + dest, source, num);
+    return new_sz;
+  }
+
+  /// Copy 'num' bytes from the blob starting with 'from' byte to 'dest' buffer.
+  /// The destination must be correctly allocated.
+  /// Returns new position from which further bytes should be read.
+  size_t memread(size_t from, void* dest, size_t num) const {
+    size_t new_sz = from + num;
+    if (new_sz < from || new_sz < num)
+      throw std::overflow_error(std::string(__PRETTY_FUNCTION__) + ":\n\tread index overflowed size_t. " +
+          "Most likely the transfered data (byte buffer) is corrupted.");
+    if (new_sz > m_data.size())
+      throw std::out_of_range(std::string(__PRETTY_FUNCTION__) + ":\n\tread index went outside byte buffer size. " +
+          "Most likely the transfered data (byte buffer) is corrupted.");
+    std::memcpy(dest, reinterpret_cast<const char *>(m_data.data()) + from, num);
+    return new_sz;
+  }
 
 private:
   /// The BLOB data buffer

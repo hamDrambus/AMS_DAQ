@@ -119,6 +119,11 @@ public:
    **/
   SharedDataType(const void *data, const size_t size) { reconstruct(data, size); }
   /**
+   * @brief Constructor using shared pointer to inner data from the parameter.
+   * @param ptr pointer to the data.
+   **/
+  SharedDataType(std::shared_ptr<T> ptr) : DataType(), data_ptr(ptr) {}
+  /**
    * @brief Move constructor.
    **/
   SharedDataType(SharedDataType<T> &&rhs) noexcept : DataType() {

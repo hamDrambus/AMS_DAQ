@@ -19,6 +19,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
+
 struct header_t {
   uint16_t payload_size;
   uint16_t source_id;

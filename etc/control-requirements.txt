@@ -16,3 +16,5 @@ urllib3==1.26.6
 zipp==3.4.1
 zmq==0.0.0
 psutil==5.9.5
+pyqtgraph==0.13.3
+PyQt5==5.15.9
