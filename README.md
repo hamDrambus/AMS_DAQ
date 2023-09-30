@@ -1,10 +1,10 @@
-# DAQling
+# AMS data acquisition and control system based on DAQling
 
-A software framework for the development of modular and distributed data acquisition systems.
+DAQling is a software framework for the development of modular and distributed data acquisition systems.
 
 ## Documentation
 
-Detailed documentation can be found at [https://daqling.docs.cern.ch](https://daqling.docs.cern.ch).
+Detailed documentation on DAQling can be found at [https://daqling.docs.cern.ch](https://daqling.docs.cern.ch).
 
 Subscribe to the "daqling-users" CERN e-group for updates.
 
@@ -232,3 +232,101 @@ The following authors, in alphabetical order, have contributed to DAQling:
 - Giovanna Lehmann Miotto, CERN, @glehmann
 - Viktor Vilhelm Sonesten, CERN, @vsoneste
 - Clement Claude Thorens, Université de Genève, @cthorens
+
+## (NEW) DAQling design issues and fixes
+
+These issues were identified by me when designing the Accelerator Mass Spectrometry (AMS) data acquisition and analysis as well as control and monitoring system.
+
+#### Data flow between DAQling modules
+
+Initially DAQling supported only sending simple (trivially copyable) data structs over module connections (zmq or others).
+This meant that even sending std::vectors was not possible and one had to work with hard-coded arrays.
+This is particularly limiting if one uses variable number of channels from ADC board.
+It is unreasonable to send full data packet if only few of the channels are actually in use.
+
+It was remedied by me by adding transfer of arbitrary serializable data (SerializableFormat.hpp and CaenOutputFormat.hpp).
+
+#### Data flow from DAQling modules to GUI/Python
+
+DAQling has metric mechanism which periodically sends some data from DAQling to the python control scripts (GUI).
+The issue is that this data is very simple - only sending single atomic values (double, int) is supported.
+So, for example, if one wants to monitor signals obtained by ADC board in GUI (like in oscilloscope), there is no built-in mechanism to do it.
+There were several workarounds:
+
+- Extend metric functionality to support std::atomic<std::vector<>>. Poor solution because:
+1. Atomic of vector is a bad idea overall and 
+2. Because it is still not possible to send complex data (e.g. structs).
+
+- Send data to database (redis or others) and pull it by GUI on demand. Poor solution because: 
+1. Writes to database should logically occur only at the end of event processing (FileWriterModule).
+If not, then each monitored module will send data to additional temporary database.
+This adds an additional entity (complexity).
+2. Support of arrays by conventional databases is very limited.
+Even if there is a workaround, e.g by storing arrays via json files, there are 64 kB limits on data size (in redis at least). There are options: rasdaman, SciDB, PostgreSQL.
+
+- Use already existing zmq connections in modules and connect to them from python.
+It is chosen solution for its simplicity.
+Its feasibility is shown in scripts/CaenDummyEventViewerQt/eventmonitor.py (proof of concept, very rough prototype).
+There is concern that intercepting every event in python may be too slow (event if most of them are ignored for performance's sake).
+The bonus is that GUI can be notified instantly by modules, as GUI clock is not used.
+
+- Implement custom module command which returns binary data on demand from the GUI.
+Initially discarded as it requires extensive rework of DAQling command interface.
+There was also a question of data size limit, but it seems it is not an issue (requires further reading on XML-RPC).
+Anyway, it seems that reworking commands is required anyway, see below.
+Another point to note is that while using commands, it is not possible to notify GUI instantly if something important and time sensitive happens.
+
+### Control of states (status) of DAQling modules
+
+DAQling module loader (ModuleManager.hpp) has finite state machine (FSM) which keeps track of DAQling process' state and DAQProcess modules' states.
+The built-in states are "booted", "ready" (configured), "running" and "inconsistent" (for whole manager only) plus their transitional states (e.g. "booting").
+The changes between these states are driven by commands issued via XML-RPC server (supervisord).
+When command is called from python, the returned value is either "Success" or "Failure: ..." with some message.
+A special status command can be called from python to return current state of all modules as a list of strings.
+Custom commands can be added along with new states.
+There are several issues with current design:
+
+1. Commands can not return any data (besides status command which also does not interact with DAQProcess class).
+So it is not possible to request for signature of transferred data (for de-serialization) or some state info (error message) from DAQProcess itself.
+Neither it is possible to request raw data from the module, for example if one wants to get some parameters for processed events to display in GUI while avoiding polling database (which can be not written to if a run has not started yet).
+
+2. The states of DAQProcess are managed by the ModuleManager.
+It does not make sense, as state is a property of each DAQProcess and should be kept there.
+The only exception is when there are no modules at all, in which case the state of the manager is simply "booted".
+The most glaring issue in the current approach is that if something happens in the module (e.g. some error which should change its status from "running" to "ready"), there is no way for the ModuleManager to be made aware of this.
+The concrete example is the case when connection to ADC board is interrupted for some reason (pulled out wire) and DAQProcess detects it.
+The correct way to handle it would be to change the module status from "running" to "disconnected"/"configured", not throwing terminating error in noexepts DAQProcess::runner.
+
+3. Related to p.2, the ModuleManager and XML-RPC commands assume that all command calls guarantee state transition.
+Which is incorrect assumption as command execution may throw error in which case the module state will be stuck in -ing state (not tested).
+Another example is when incorrect configuration (specified by user in GUI) is passed to the module.
+In this case the state should stay as booted and user (GUI/python) made aware of incorrect configuration.
+Finally, it is possible that some commands may have different target states even on success, for example if some simple modules (e.g. event processors) are always running and transition directly from "booted" to "running".
+
+4. Related to p.3 and p.2, there seem no way to easily modify built-in states and transitions.
+Using the example of ADC board again, additional "connected" state should be between "ready" (should be "configured" rather) and "running".
+Which states for built-in commands are valid should also be changed (e.g. start() can't now run from "ready").
+There is an option to ignore build-in logic and use custom commands for everything, but it seems like a good way to become confused.
+
+It is a work in progress on how to handle these issues elegantly (esp. p.4), without heavy feature creep and extensive modifications to DAQling.
+
+Some thoughts:
+
+- All commands should return .json files. Corresponding parser for python will have to be added.
+
+- Move state handling to DAQProcess class.
+std::string m_state, DAQProcess::getState() at the very least. Enums?
+std::DAQProcess will handle both commands and associated state transitions.
+string m\_error\_message
+Whether command is accepted by module (DAQProcess) is determined by the module itself.
+Issue: in this approach DAQProcess will have two distinct roles: state handling and runner (work) management.
+Separate it into two classes then somehow?
+But I do want to make DAQProcess a complex class to handle complicated logic.
+
+### Default databases can't store raw signals.
+
+MongoDB or influxdb have poor or nonexistent support for storing raw arrays of Xs and Ys.
+Workaround with storing json does not cut it for expected event sizes (> 64 kB).
+There are database options (rasdaman, SciDB, PostgreSQL) but I decided that at the moment setting them up is not worth it.
+So the raw data will be written into binary files.
+Metadata (event parameters such as is\_selected\_event, energies, currents, etc. and slow parameters values) will be stored in influxdb.
