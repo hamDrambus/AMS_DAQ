@@ -1,0 +1,18 @@
+{
+  "refresh_rate_ms": 200,
+  "connections": {
+    "receivers": [
+      {
+        "type": "ZMQPubSub",
+        "chid": 0,
+        "connections":[
+	        {
+	          "transport": "tcp",
+	          "host": "localhost",
+	          "port": 8101
+	        }
+        ]
+      }
+    ]
+  }
+}
