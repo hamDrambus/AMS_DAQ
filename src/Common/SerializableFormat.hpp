@@ -23,7 +23,7 @@ protected:
 
 public:
   SerializableFormat() = default;
-  ~SerializableFormat() = default;
+  virtual ~SerializableFormat() = default;
   
   /// @brief Move constructor
   SerializableFormat(SerializableFormat &&rhs) noexcept : m_byte_buffer{std::move(rhs.m_byte_buffer)} {};
@@ -51,8 +51,20 @@ public:
     return *this;
   }
 
-  // Must be re-implemented with deserialize for derived classes
-  //SerializableFormat(const void *data, const size_t size) : m_byte_buffer(data, size) {}
+  /// @brief Deserialize function used in data reconstruction from (const void *data, const size_t size).
+  /// This reconstruction occurs when recieving data from connections. Also refer to DataTypeWrapper.
+  /// @param data
+  /// @param size
+  /// @return True on success
+  bool deserialize (const void *data, const size_t size) {
+    m_byte_buffer = Binary(data, size);
+
+    if (m_byte_buffer.error()) { // Failed to allocate memory
+      m_byte_buffer.clear();
+      return false;
+    }
+    return deserialize();
+  }
 
   // Clears all data. Necessary in case serialization falied and we want a clear state.
   virtual void clear(void) noexcept = 0;
@@ -102,19 +114,4 @@ protected:
   /// @param dest is the starting byte in the buffer (allows reading after previous data)
   /// @return new de-serialization position (position after the last read byte) on success and 0 on fail.
   virtual size_t deserialize(const Binary & dataBuffer, size_t dest) = 0;
-
-  /// @brief Helper function used in constructor (const void *data, const size_t size).
-  /// This constructor must be implemented in children so that DAQling may transfer them
-  /// @param data
-  /// @param size
-  /// @return True on success
-  bool deserialize (const void *data, const size_t size) {
-    m_byte_buffer = Binary(data, size);
-
-    if (m_byte_buffer.error()) { // Failed to allocate memory
-      m_byte_buffer.clear();
-      return false;
-    }
-    return deserialize();
-  }
 };

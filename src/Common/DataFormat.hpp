@@ -34,7 +34,16 @@ struct data_t {
   inline size_t size() { return sizeof(header) + header.payload_size; }
   inline void *data() { return this; }
   data_t() = default;
-  data_t(const void *data, const size_t size) { memcpy(this, data, size); }
+  
+  /// @brief Deserialize function used in data reconstruction from (const void *data, const size_t size).
+  /// This reconstruction occurs when recieving data from connections. Also refer to DataTypeWrapper.
+  /// @param data
+  /// @param size
+  /// @return True on success
+  bool deserialize (const void *data, const size_t size) {
+    memcpy(this, data, size);
+    return true;
+  }
   // const void* data() const{return this;};
 } __attribute__((__packed__));
 

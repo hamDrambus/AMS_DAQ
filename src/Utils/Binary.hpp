@@ -69,6 +69,21 @@ public:
     }
   }
 
+  bool deserialize(const void *data, const size_t size) noexcept {
+    if (data == nullptr) {
+      m_error = error_code::invalid_arg;
+      return false;
+    }
+    try {
+      m_data.resize(size);
+      std::memcpy(reinterpret_cast<char *>(m_data.data()), data, size);
+      return true;
+    } catch (const std::bad_alloc &) {
+      m_error = error_code::alloc;
+      return false;
+    }
+  }
+
   /// Copy constructor
   explicit Binary(const Binary &rhs) noexcept {
     try {

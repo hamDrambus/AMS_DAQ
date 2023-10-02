@@ -21,7 +21,7 @@ using Binary = daqling::utilities::Binary;
 using std::size_t;
 
 template <class T>
-class caen_output_data final : public SerializableFormat {
+class caen_output_data : public SerializableFormat {
   // Want fast serialization by memcpy-ing vectors to void* buffer
   static_assert(std::is_trivially_copyable_v<T> == true, "caen_output_data: template parameter must be copyable with memcpy.");
   // vector<bool> is a special case in terms of memory allocation
@@ -41,16 +41,12 @@ public:
   std::string device;
   std::vector<channel_data> ch_data;
   caen_output_data() = default;
+  virtual ~caen_output_data() = default;
   
   caen_output_data(const caen_output_data &) = default;
   caen_output_data(caen_output_data &&) noexcept = default;
   caen_output_data &operator=(const caen_output_data &) = default;
   caen_output_data &operator=(caen_output_data &&) noexcept = default;
-
-  // Must be implemented for trasfering by DAQling
-  caen_output_data(const void *data, const size_t size) : SerializableFormat() {
-    deserialize(data, size);
-  }
 
   void clear(void) noexcept override {
     ch_data.clear();

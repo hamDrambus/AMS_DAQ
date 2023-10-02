@@ -166,7 +166,7 @@ public:
     if (rhs.m_shared) {
       data_ptr = rhs.data_ptr;
     } else if (rhs.data_ptr != nullptr) {
-      data_ptr = std::make_shared<T>(rhs.data(), rhs.size());
+      data_ptr = std::make_shared<T>(*rhs.data_ptr);
     } else {
       data_ptr = nullptr;
     }
@@ -175,7 +175,7 @@ public:
    * @brief Copy construct from DataFragment<T>.
    **/
   SharedDataType(const DataFragment<T> &rhs) noexcept {
-    data_ptr = std::make_shared<T>(rhs.data(), rhs.size());
+    data_ptr = std::make_shared<T>(*rhs.data_ptr);
   }
   /**
    * @brief Copy assignemnt.
@@ -187,7 +187,7 @@ public:
     if (rhs.m_shared) {
       data_ptr = rhs.data_ptr;
     } else if (rhs.data_ptr != nullptr) {
-      data_ptr = std::make_shared<T>(rhs.data(), rhs.size());
+      data_ptr = std::make_shared<T>(*rhs.data_ptr);
     } else {
       data_ptr = nullptr;
     }
@@ -201,7 +201,7 @@ public:
       return *this;
     }
     if (rhs.data() != nullptr) {
-      data_ptr = std::make_shared<T>(rhs.data(), rhs.size());
+      data_ptr = std::make_shared<T>(*rhs.data_ptr);
     } else {
       data_ptr = nullptr;
     }
@@ -213,7 +213,8 @@ public:
    * @param size size of data.
    **/
   void reconstruct(const void *data, const size_t size) override {
-    data_ptr = std::make_shared<T>(data, size);
+    data_ptr = std::make_shared<T>();
+    data_ptr->deserialize(data, size);
   }
 
   /**
@@ -224,7 +225,7 @@ public:
     if (data_ptr != nullptr && rhs.data_ptr != nullptr) {
       *(data_ptr.get()) += *(rhs.data_ptr.get());
     } else if (rhs.data_ptr != nullptr) {
-      data_ptr = std::make_shared<T>(rhs.data_ptr->data(), rhs.data_ptr->size());
+      data_ptr = std::make_shared<T>(*rhs.data_ptr);
     }
     return *this;
   }
@@ -401,7 +402,7 @@ public:
   DataFragment(const DataFragment<T> &rhs) {
     m_detached = false;
     if (rhs.data_ptr != nullptr) {
-      data_ptr = new T(rhs.data(), rhs.size());
+      data_ptr = new T(*rhs.data_ptr);
     } else {
       data_ptr = nullptr;
     }
@@ -418,7 +419,7 @@ public:
     }
     m_detached = false;
     if (rhs.data_ptr != nullptr) {
-      data_ptr = new T(rhs.data(), rhs.size());
+      data_ptr = new T(*rhs.data_ptr);
     } else {
       data_ptr = nullptr;
     }
@@ -436,7 +437,7 @@ public:
     }
     m_detached = false;
     if (rhs.data_ptr != nullptr) {
-      data_ptr = new T(rhs.data(), rhs.size());
+      data_ptr = new T(*rhs.data_ptr);
     } else {
       data_ptr = nullptr;
     }
@@ -449,7 +450,8 @@ public:
    **/
   void reconstruct(const void *data, const size_t size) override {
     delete data_ptr;
-    data_ptr = new T(data, size);
+    data_ptr = new T();
+    data_ptr->deserialize(data, size);
   }
   /**
    * @brief Compound assignment - addition of inner data.
@@ -459,7 +461,7 @@ public:
     if (data_ptr != nullptr && rhs.data_ptr != nullptr) {
       *data_ptr += *rhs.data_ptr;
     } else if (rhs.data_ptr != nullptr) {
-      data_ptr = new T(rhs.data_ptr->data(), rhs.data_ptr->size());
+      data_ptr = new T(*rhs.data_ptr);
     }
     return *this;
   }
