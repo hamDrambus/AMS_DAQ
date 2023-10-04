@@ -262,7 +262,7 @@ There were several workarounds:
 If not, then each monitored module will send data to additional temporary database.
 This adds an additional entity (complexity).
 2. Support of arrays by conventional databases is very limited.
-Even if there is a workaround, e.g by storing arrays via json files, there are 64 kB limits on data size (in redis at least). There are options: rasdaman, SciDB, PostgreSQL.
+Even if there is a workaround, e.g by storing arrays via json files, there are 64 kB limits on data size (in redis at least). There are other options: rasdaman, SciDB, PostgreSQL.
 
 - Use already existing zmq connections in modules and connect to them from python.
 It is chosen solution for its simplicity.

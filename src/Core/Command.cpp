@@ -35,18 +35,14 @@ public:
     std::unordered_set<std::string> types_affected =
         daqling::core::Command::paramListToUnordered_set(paramList, 0, paramList.size());
     try {
-      // auto &command = daqling::core::Command::instance();
-      auto resVec = plugin.getIndividualStates();
-      std::vector<xmlrpc_c::value> rpc_vec;
-      rpc_vec.reserve(resVec.size());
-      for (const auto &item : resVec) {
-        rpc_vec.push_back(xmlrpc_c::value_string(item));
-      }
-      *retvalP = xmlrpc_c::value_array(rpc_vec);
+      nlohmann::json state = plugin.getIndividualStates();
+      // Return that command was executed sucessfully and results of this command
+      nlohmann::json result = {{"status", "Success"}, {"response", state}};
+      *retvalP = xmlrpc_c::value_bytestring(nlohmann::json::to_bson(result));
     } catch (ers::Issue &i) {
       ers::error(CommandIssue(ERS_HERE, i));
-      std::string error_response = "Failure: " + std::string(i.message());
-      *retvalP = xmlrpc_c::value_string(error_response);
+      nlohmann::json result = {{"status", "Error"}, {"response", std::string(i.message())}};
+      *retvalP = xmlrpc_c::value_bytestring(nlohmann::json::to_bson(result));
     } catch (std::exception const &e) {
       ers::fatal(UnknownException(ERS_HERE, e.what()));
     }

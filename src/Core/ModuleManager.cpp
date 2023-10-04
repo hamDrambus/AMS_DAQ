@@ -271,10 +271,13 @@ std::string ModuleManager::getStatesAsString() {
   return state;
 }
 
-std::vector<std::string> ModuleManager::getIndividualStates() {
-  std::vector<std::string> ret;
+nlohmann::json ModuleManager::getIndividualStates() {
+  nlohmann::json ret;
+  ret["state"] = getStatesAsString(); // Overall manager state
   for (auto const & [ key, mod ] : m_modloaders) {
-    ret.push_back(key + " , " + mod.m_module_status);
+    ret[key]["state"] = mod.m_module_status;
+    // TODO: get status from module itself.
+    // TODO: get additional (optional) info such as error message.
   }
   return ret;
 }

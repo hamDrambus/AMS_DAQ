@@ -18,6 +18,7 @@
 from supervisor_wrapper import supervisor_wrapper
 import zmq
 import json
+import bson
 import jsonref
 from time import sleep
 from xmlrpc.client import ServerProxy
@@ -150,14 +151,20 @@ class daqcontrol:
       status = []
       module_names = []
       try:
-        status = self.handleRequest(p['host'], p['port'], req)
-        if(status==[]):
+        json_result = bson.loads(self.handleRequest(p['host'], p['port'], req).data)
+        if json_result['status'] != 'Success': # Command failed
           for mod in p['modules']:
-            status.append('booted')
+            status.append('unknown')
             module_names.append(mod['name'])
         else:
-          module_names, status = map(list, zip(*(x.split(' , ') for x in status)))
-      except:
+          for key, val in json_result['response'].items():
+            if key == 'state': # Overall module manager state
+              continue
+            module_names.append(key)
+            status.append(val['state'])
+      except Exception as e:
+        print("Exception during executing status command:")
+        print(str(e))
         if self.use_supervisor:
           for mod in p['modules']:
             status.append('added')

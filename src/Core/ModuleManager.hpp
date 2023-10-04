@@ -31,6 +31,7 @@
 #include <unordered_set>
 #include <utility>
 /// \endcond
+#include <nlohmann/json.hpp>
 
 #include "DAQProcess.hpp"
 #include "ModuleLoader.hpp"
@@ -132,7 +133,7 @@ public:
   // getState(std::unordered_set<std::string> modargs = std::unordered_set<std::string>());
   std::string getState(const std::string &modarg);
   std::string getStatesAsString();
-  std::vector<std::string> getIndividualStates();
+  nlohmann::json getIndividualStates();
   std::unordered_set<std::string>
   getModulesEligibleForCommand(std::unordered_set<std::string> modargs,
                                std::unordered_set<std::string> states);

@@ -26,6 +26,7 @@
 #include <xmlrpc-c/base.hpp>
 #include <xmlrpc-c/registry.hpp>
 #include <xmlrpc-c/server_abyss.hpp>
+#include <nlohmann/json.hpp>
 namespace daqling {
 #include <ers/Issue.h>
 
