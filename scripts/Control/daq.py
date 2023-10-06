@@ -32,13 +32,11 @@ from time import sleep
 from copy import deepcopy
 import argparse
 
-def spawnJoin(list, func):
+def spawn_join(list, func):
   futures = []
   rvs = []
   with concurrent.futures.ThreadPoolExecutor() as executor:
-    for p in list:
-      f = executor.submit(func, p)
-      futures.append(f)
+    futures = [executor.submit(func, param) for param in list]
     for f in futures:
       try:
         rvs.append(f.result())
@@ -47,11 +45,14 @@ def spawnJoin(list, func):
         rvs.append(e)
   return rvs
 
+def formatted_spawn_join(components, func):
+  return {comp['name']: (res['status'] if not isinstance(res, Exception) else res)
+          for comp, res in zip(components, spawn_join(components, func))}
 
 def signal_handler(sig, frame):
   print("Ctrl+C: shutting down")
   sc.stop_check_threads()
-  spawnJoin(data['components'], dc.shutdownProcess)
+  print(formatted_spawn_join(data['components'], dc.shutdownProcess))
   if args.arg!= 'configure':
     try:
       dc.removeProcesses(data['components'])
@@ -155,6 +156,8 @@ if 'path' in data.keys():
 else:
   dir = env['DAQ_BUILD_DIR']
 print("Using path "+dir)
+# TODO: this is correct only for host machine
+# scripts_dir or dir must be set instead in .conf file 
 scripts_dir = env['DAQ_SCRIPT_DIR']
 exe = "/bin/daqling"
 lib_path = 'LD_LIBRARY_PATH='+env['LD_LIBRARY_PATH']+':'+dir+'/lib/,TDAQ_ERS_STREAM_LIBS=DaqlingStreams'
@@ -214,7 +217,7 @@ sc = statusChecker(dc)
 sc.startChecker(data['components'])
 
 if args.arg == 'configure' or args.arg == 'complete':
-  print(spawnJoin(data['components'], dc.configureProcess))
+  print(formatted_spawn_join(data['components'], dc.configureProcess))
 
 signal.signal(signal.SIGINT, signal_handler)
 
@@ -224,23 +227,23 @@ while(not sc.stop_check):
   print("Executing", cmd, ' '.join(cmd_args))
   command_threads = []
   if cmd == "config":
-    print(spawnJoin(data['components'], dc.configureProcess))
+    print(formatted_spawn_join(data['components'], dc.configureProcess))
   if cmd == "unconfig":
-    print(spawnJoin(data['components'], dc.unconfigureProcess))
+    print(formatted_spawn_join(data['components'], dc.unconfigureProcess))
   elif cmd == "start":
     try:
       sp = partial(dc.startProcess, run_num=cmd_args[0])
-      print(spawnJoin(data['components'], sp))
+      print(formatted_spawn_join(data['components'], sp))
     except IndexError:
       print("Run number not specified. Default to 0")
-      print(spawnJoin(data['components'], dc.startProcess))
+      print(formatted_spawn_join(data['components'], dc.startProcess))
     except Exception as e:
       print(e)
   elif cmd == "stop":
-    print(spawnJoin(data['components'], dc.stopProcess))
+    print(formatted_spawn_join(data['components'], dc.stopProcess))
   elif cmd == "down":
     sc.stop_check_threads()
-    print(spawnJoin(data['components'], dc.shutdownProcess))
+    print(formatted_spawn_join(data['components'], dc.shutdownProcess))
     if add_scripts:
       try:
         dc.removeProcesses(data['scripts'])
@@ -255,7 +258,7 @@ while(not sc.stop_check):
   elif cmd == "command":
     try:
       ccp = partial(dc.customCommandProcess, command=cmd_args[0], arg=' '.join(cmd_args[1:]))
-      print(spawnJoin(data['components'], ccp))
+      print(formatted_spawn_join(data['components'], ccp))
     except IndexError:
       print("Missing required command argument")
 

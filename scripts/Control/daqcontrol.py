@@ -123,27 +123,27 @@ class daqcontrol:
   def configureProcess(self, p):
     req = 'configure'
     config = json.dumps(p)
-    return self.handleRequest(p['host'], p['port'], req, config)
+    return bson.loads(self.handleRequest(p['host'], p['port'], req, config).data)
 
   def unconfigureProcess(self, p):
     req = 'unconfigure'
-    return self.handleRequest(p['host'], p['port'], req)
+    return bson.loads(self.handleRequest(p['host'], p['port'], req).data)
 
   def startProcess(self, p, run_num=0):
     req = 'start'
-    return self.handleRequest(p['host'], p['port'], req, int(run_num))
+    return bson.loads(self.handleRequest(p['host'], p['port'], req, int(run_num)).data)
 
   def stopProcess(self, p):
     req = 'stop'
-    return self.handleRequest(p['host'], p['port'], req)
+    return bson.loads(self.handleRequest(p['host'], p['port'], req).data)
 
   def shutdownProcess(self, p):
     req = 'down'
-    return self.handleRequest(p['host'], p['port'], req)
+    return bson.loads(self.handleRequest(p['host'], p['port'], req).data)
 
   def customCommandProcess(self, p, command, arg=None):
     req = 'custom'
-    return self.handleRequest(p['host'], p['port'], req, command, arg)
+    return bson.loads(self.handleRequest(p['host'], p['port'], req, command, arg).data)
 
   def getStatus(self, p):
       sw = supervisor_wrapper(p['host'], self.group)
@@ -152,16 +152,19 @@ class daqcontrol:
       module_names = []
       try:
         json_result = bson.loads(self.handleRequest(p['host'], p['port'], req).data)
+        # 'status' key means here whether command was executed successfully.
+        # The actual status is in 'response' to the command.
         if json_result['status'] != 'Success': # Command failed
           for mod in p['modules']:
             status.append('unknown')
             module_names.append(mod['name'])
         else:
-          for key, val in json_result['response'].items():
-            if key == 'state': # Overall module manager state
-              continue
+          for key, val in json_result['modules'].items():
             module_names.append(key)
-            status.append(val['state'])
+            if val['status'] != 'Success': # status command failed for this module
+              status.append('unknown')  
+            else:
+              status.append(val['response'])
       except Exception as e:
         print("Exception during executing status command:")
         print(str(e))

@@ -50,11 +50,14 @@ class supervisor_wrapper:
   #  @param env The environment variables to pass to the executable
   #  @param command The command to use to run a script (example: python3)
   def addProgram(self, name, exe, dir, env, command=""):
+    # TODO: add a setting for logs directory in config file (modify validation scheme accordingly)
+    # TODO: or make supervisor use DAQling environment on host machines.
+    # Make logs folder a part of environment?
     now = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     user = getpass.getuser()
-    log_file = "/home/fvirt/Documents/AMS_DAQ/DAQling/daqling-develop/log/"+name+"-"+user+"-"+now+".log"
+    log_file = '/home/fvirt/Documents/AMS_DAQ/DAQling/daqling-develop/log/'+name+'-'+user+'-'+now+'.log'
     settings = {
-        'command': command+" "+dir+exe,
+        'command': command+' '+dir+exe,
         'directory': dir,
         'autorestart': 'false',
         'startretries': '0',

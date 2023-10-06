@@ -92,41 +92,41 @@ public:
    * Unloads the loaded module.
    * Returns whether the operation succeeded.
    */
-  bool unload(std::unordered_set<std::string> modargs);
+  nlohmann::json unload(std::unordered_set<std::string> modargs);
 
   /**
    * Configures the loaded module.
    *
    * @warning May only be called after a successful `load`.
    */
-  void configure(std::unordered_set<std::string> modargs);
+  nlohmann::json configure(std::unordered_set<std::string> modargs);
   /**
    * Unconfigures the loaded module.
    *
    * @warning May only be called after a successful `load`.
    */
-  void unconfigure(std::unordered_set<std::string> modargs);
+  nlohmann::json unconfigure(std::unordered_set<std::string> modargs);
 
   /**
    * Starts the loaded module.
    *
    * @warning May only be called after a successful `load`.
    */
-  void start(unsigned run_num, std::unordered_set<std::string> modargs);
+  nlohmann::json start(unsigned run_num, std::unordered_set<std::string> modargs);
 
   /**
    * Stops the loaded module.
    *
    * @warning May only be called after a successful `load`.
    */
-  void stop(std::unordered_set<std::string> modargs);
+  nlohmann::json stop(std::unordered_set<std::string> modargs);
 
   /**
    * Executes a custom module command `cmd` if registered.
    *
    * Returns whether specified command was executed.
    */
-  bool command(const std::string &cmd, const std::string &arg,
+  nlohmann::json command(const std::string &cmd, const std::string &arg,
                std::unordered_set<std::string> modargs);
 
   // std::string

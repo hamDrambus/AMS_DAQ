@@ -45,6 +45,9 @@ ERS_DECLARE_ISSUE_BASE(core, AddChannelFailed, core::CommandIssue,
 ERS_DECLARE_ISSUE_BASE(core, InvalidCommand, core::CommandIssue, "Invalid Command.", ERS_EMPTY,
                        ERS_EMPTY)
 
+ERS_DECLARE_ISSUE_BASE(core, InvalidState, core::CommandIssue, "Invalid state " << state << " for command "<< command, ERS_EMPTY,
+                       ((std::string) state) ((std::string) command) )
+
 ERS_DECLARE_ISSUE_BASE(core, UnregisteredCommand, core::CommandIssue,
                        "Unregistered command: " << CommandName, ERS_EMPTY,
                        ((const char *)CommandName))
@@ -79,6 +82,14 @@ public:
     }
     return types_affected;
   }
+
+  // Some commands consist of actually several commands (calls) for module manager.
+  // For example, 'unconfigure' consisits of unconfiguring and unloading the module.
+  // Each step returns its own json responce. This function merges two responces into a single
+  // one which will be returned by XML-RPC (to python). It handles all cases of potential
+  // fails. Only commands which have empty response (including in modules) should be merged!
+  // If responces are not empty (e.g. both arguments have errors) responce is overwritten to merge error.
+  static nlohmann::json mergeCommandResponses (const nlohmann::json &resp1, const nlohmann::json &resp2);
 
 private:
   bool m_should_stop;

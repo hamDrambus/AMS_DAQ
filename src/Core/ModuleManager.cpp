@@ -76,134 +76,191 @@ bool ModuleManager::load(const std::string &name, const std::string &type) {
   return success;
 }
 
-bool ModuleManager::unload(std::unordered_set<std::string> modargs) {
+nlohmann::json ModuleManager::unload(std::unordered_set<std::string> modargs) {
+  nlohmann::json ret;
   setTag("core");
   auto mod_func = ModuleFunction(
-      [](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs) {
+      [&ret](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs) {
         if (modargs.find(key) != modargs.end()) {
           if (mod.m_module_loader->unload()) {
             mod.m_module_loader.release();
             ModuleManager::instance().m_modloaders.erase(key);
+            ret["modules"][mod.m_module_name]["status"] = "Success";
+            ret["modules"][mod.m_module_name]["response"] = "";
             return true;
           }
-          return false;
+          ret["modules"][mod.m_module_name]["status"] = "Error";
+          ret["modules"][mod.m_module_name]["response"] = std::string("Failed to unload module ") + key;
           ERS_WARNING("Failed to unload module " << key);
+          return false;
         }
         return true;
       },
-      std::move(modargs));
-  return for_each_module(mod_func);
+      modargs);
+  if (for_each_module(mod_func)) {
+    ret["status"] = "Success";
+    ret["response"] = "";
+  } else {
+    ret["status"] = "Error";
+    ret["response"] = "";
+  }
+  return ret;
 }
-void ModuleManager::configure(std::unordered_set<std::string> modargs) {
+
+nlohmann::json ModuleManager::configure(std::unordered_set<std::string> modargs) {
+  nlohmann::json ret;
   setTag("core");
   if (!modargs.empty()) {
     for (const auto &mod : modargs) {
       ERS_INFO("Configuring modules with name: " << mod);
     }
   } else {
+    ret["status"] = "Error";
+    ret["response"] = "No modules eligible for configure.";
+    ret["modules"] = {};
     ERS_INFO("No modules eligible for configure.");
-    return;
+    return ret;
   }
   auto mod_func = ModuleFunction(
-      [](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs) {
+      [&ret](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs) {
         if (modargs.find(key) != modargs.end()) {
           mod.m_module_status = "configuring";
           setTag(key);
-          mod.m_module_loader->configure();
+          mod.m_module_loader->configure(); // TODO: add possibility for failing configure()
           mod.m_module_status = "ready";
+          ret["modules"][mod.m_module_name]["status"] = "Success";
+          ret["modules"][mod.m_module_name]["response"] = "";
           return true;
         }
         return false;
       },
       modargs);
   for_each_module(mod_func);
+  ret["status"] = "Success";
+  ret["response"] = "";
+  if (!ret.contains("modules")) {
+    ret["response"] = "Warning: modules status was not written.";
+  }
+  return ret;
 }
 
-void ModuleManager::start(unsigned run_num, std::unordered_set<std::string> modargs) {
+nlohmann::json ModuleManager::start(unsigned run_num, std::unordered_set<std::string> modargs) {
   // change to take list as argument instead
+  nlohmann::json ret;
   setTag("core");
   if (!modargs.empty()) {
     for (const auto &mod : modargs) {
       ERS_INFO("Starting modules with name: " << mod);
     }
   } else {
+    ret["status"] = "Error";
+    ret["response"] = "No modules eligible for start.";
+    ret["modules"] = {};
     ERS_INFO("No modules eligible for start.");
-    return;
+    return ret;
   }
   auto mod_func = ModuleFunction(
-      [](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs,
+      [&ret](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs,
          unsigned run_num) {
         auto &cm = daqling::core::ConnectionManager::instance();
         if (modargs.find(key) != modargs.end()) {
           mod.m_module_status = "starting";
           setTag(key);
           if (!cm.start(mod.m_module_name)) {
+            // TODO: should return error?
             ERS_WARNING("Could not find submanager");
           }
-          mod.m_module_loader->start(run_num);
+          mod.m_module_loader->start(run_num); // TODO: add handling of failed start
           mod.m_module_status = "running";
+          ret["modules"][mod.m_module_name]["status"] = "Success";
+          ret["modules"][mod.m_module_name]["response"] = "";
           return true;
         }
         return false;
       },
       modargs, run_num);
   for_each_module(mod_func);
+  ret["status"] = "Success";
+  ret["response"] = "";
+  return ret;
 }
 
-void ModuleManager::stop(std::unordered_set<std::string> modargs) {
+nlohmann::json ModuleManager::stop(std::unordered_set<std::string> modargs) {
+  nlohmann::json ret;
   setTag("core");
   if (!modargs.empty()) {
     for (const auto &mod : modargs) {
       ERS_INFO("Stopping modules with name: " << mod);
     }
   } else {
+    ret["status"] = "Error";
+    ret["response"] = "No modules eligible for stop.";
+    ret["modules"] = {};
     ERS_INFO("No modules eligible for stop.");
-    return;
+    return ret;
   }
   auto mod_func = ModuleFunction(
-      [](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs) {
+      [&ret](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs) {
         if (modargs.find(key) != modargs.end()) {
           auto &cm = daqling::core::ConnectionManager::instance();
           mod.m_module_status = "stopping";
           setTag(key);
-          mod.m_module_loader->stop();
+          mod.m_module_loader->stop(); // TODO: add handling failed stop
           cm.stop(mod.m_module_name);
           mod.m_module_status = "ready";
+          ret["modules"][mod.m_module_name]["status"] = "Success";
+          ret["modules"][mod.m_module_name]["response"] = "";
         }
         return true;
       },
       modargs);
   for_each_module(mod_func);
+  ret["status"] = "Success";
+  ret["response"] = "";
+  return ret;
 }
 
-bool ModuleManager::command(const std::string &cmd, const std::string &arg,
+nlohmann::json ModuleManager::command(const std::string &cmd, const std::string &arg,
                             std::unordered_set<std::string> modargs) {
+  nlohmann::json ret;
   setTag("core");
   if (!modargs.empty()) {
     for (const auto &mod : modargs) {
       ERS_INFO("Sending command " << cmd << " for modules with name: " << mod);
     }
   } else {
+    ret["status"] = "Error";
+    ret["response"] = std::string("No modules eligible for command ") + arg + ".";
+    ret["modules"] = {};
     ERS_INFO("No modules eligible for command " << arg << ".");
-    return false;
+    return ret;
   }
   auto mod_func = ModuleFunction(
-      [](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs,
+      [&ret](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs,
          const std::string &cmd, const std::string &arg) {
         if (modargs.find(key) != modargs.end()) {
           ERS_INFO("setting state for " << key << " to "
                                         << mod.m_module_loader->getCommandTransitionState(cmd));
           mod.m_module_status = mod.m_module_loader->getCommandTransitionState(cmd);
           setTag(key);
-          mod.m_module_loader->command(cmd, arg);
+          mod.m_module_loader->command(cmd, arg); // TODO: handle failed execition
           ERS_INFO("setting state for " << key << " to "
                                         << mod.m_module_loader->getCommandTargetState(cmd));
           mod.m_module_status = mod.m_module_loader->getCommandTargetState(cmd);
+          ret["modules"][mod.m_module_name]["status"] = "Success";
+          ret["modules"][mod.m_module_name]["response"] = "";
         }
         return true;
       },
       modargs, cmd, arg);
-  return for_each_module(mod_func);
+  if (for_each_module(mod_func)) {
+    ret["status"] = "Success";
+    ret["response"] = "";
+  } else {
+    ret["status"] = "Error";
+    ret["response"] = "";
+  }
+  return ret;
 }
 
 std::unordered_set<std::string>
@@ -218,31 +275,42 @@ ModuleManager::CommandRegistered(const std::string &com, std::unordered_set<std:
   }
   return ret_set;
 }
-void ModuleManager::unconfigure(std::unordered_set<std::string> modargs) {
+
+nlohmann::json ModuleManager::unconfigure(std::unordered_set<std::string> modargs) {
+  nlohmann::json ret;
   setTag("core");
   if (!modargs.empty()) {
     for (const auto &mod : modargs) {
       ERS_INFO("Unconfiguring modules with name: " << mod);
     }
   } else {
+    ret["status"] = "Error";
+    ret["response"] = "No modules eligible for configure.";
+    ret["modules"] = {};
     ERS_INFO("No modules eligible for unconfigure.");
-    return;
+    return ret;
   }
   auto mod_func = ModuleFunction(
-      [](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs) {
+      [&ret](const std::string &key, module_info &mod, std::unordered_set<std::string> modargs) {
         auto &cm = daqling::core::ConnectionManager::instance();
         if (modargs.find(key) != modargs.end()) {
           mod.m_module_status = "unconfiguring";
           setTag(key);
-          mod.m_module_loader->unconfigure();
+          mod.m_module_loader->unconfigure(); // TODO: add handling of unsuccessful unconfigure()
           cm.removeChannel(mod.m_module_name);
           mod.m_module_status = "booted";
+          ret["modules"][mod.m_module_name]["status"] = "Success";
+          ret["modules"][mod.m_module_name]["response"] = "";
         }
         return true;
       },
       modargs);
   for_each_module(mod_func);
+  ret["status"] = "Success";
+  ret["response"] = "";
+  return ret;
 }
+
 std::string ModuleManager::getState(const std::string &modarg) {
   std::string state = "booted";
   if (m_modloaders.find(modarg) != m_modloaders.end()) {
@@ -273,9 +341,10 @@ std::string ModuleManager::getStatesAsString() {
 
 nlohmann::json ModuleManager::getIndividualStates() {
   nlohmann::json ret;
-  ret["state"] = getStatesAsString(); // Overall manager state
+  ret["response"] = getStatesAsString(); // Overall manager state
   for (auto const & [ key, mod ] : m_modloaders) {
-    ret[key]["state"] = mod.m_module_status;
+    ret["modules"][key]["status"] = "Success";
+    ret["modules"][key]["response"] = mod.m_module_status;
     // TODO: get status from module itself.
     // TODO: get additional (optional) info such as error message.
   }

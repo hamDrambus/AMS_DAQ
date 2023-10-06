@@ -26,6 +26,8 @@
 using namespace daqling::core;
 using namespace std::chrono_literals;
 
+// TODO: add checks that nlohmann::json result is not empty when sending it to retvalP
+
 class status : public xmlrpc_c::method {
 public:
   status() = default;
@@ -35,15 +37,15 @@ public:
     std::unordered_set<std::string> types_affected =
         daqling::core::Command::paramListToUnordered_set(paramList, 0, paramList.size());
     try {
-      nlohmann::json state = plugin.getIndividualStates();
-      // Return that command was executed sucessfully and results of this command
-      nlohmann::json result = {{"status", "Success"}, {"response", state}};
+      nlohmann::json result = plugin.getIndividualStates();
+      result["status"] = "Success";
       *retvalP = xmlrpc_c::value_bytestring(nlohmann::json::to_bson(result));
     } catch (ers::Issue &i) {
       ers::error(CommandIssue(ERS_HERE, i));
       nlohmann::json result = {{"status", "Error"}, {"response", std::string(i.message())}};
       *retvalP = xmlrpc_c::value_bytestring(nlohmann::json::to_bson(result));
     } catch (std::exception const &e) {
+      nlohmann::json result = {{"status", "FatalError"}, {"response", std::string(e.what())}};
       ers::fatal(UnknownException(ERS_HERE, e.what()));
     }
   };
@@ -53,15 +55,16 @@ class configure : public xmlrpc_c::method {
 public:
   configure() = default;
   void execute(xmlrpc_c::paramList const &paramList, xmlrpc_c::value *const retvalP) override {
-    std::string response;
+    nlohmann::json result;
     std::string argument = paramList.getString(0);
     std::unordered_set<std::string> types_affected =
         daqling::core::Command::paramListToUnordered_set(paramList, 1, paramList.size());
     auto &cm = daqling::core::ConnectionManager::instance();
     auto &plugin = daqling::core::ModuleManager::instance();
     try {
+      // TODO: remove this condition. Each module should decide itself whether it is configurable
       if (plugin.getStatesAsString() != "booted") {
-        throw InvalidCommand(ERS_HERE);
+        throw InvalidState(ERS_HERE, plugin.getStatesAsString(), std::string("configure"));
       }
       auto &cfg = Configuration::instance();
       auto &rf = ResourceFactory::instance();
@@ -79,7 +82,6 @@ public:
         ERS_DEBUG(0, "Loading type: " << type);
         try {
           plugin.load(name, type);
-
         } catch (ers::Issue &i) {
           throw CannotLoadPlugin(ERS_HERE, type.c_str(), i);
         }
@@ -109,15 +111,17 @@ public:
 
       // only apply command to modules in a state that allows the command.
       auto modules_affected = plugin.getModulesEligibleForCommand(types_affected, "booted");
-      plugin.configure(modules_affected);
-      response = "Success";
+      result = plugin.configure(modules_affected);
     } catch (ers::Issue &i) {
+      result["status"] = "Error";
+      result["response"] = i.message();
       ers::error(CommandIssue(ERS_HERE, i));
-      response = "Failure: " + std::string(i.message());
     } catch (std::exception const &e) {
+      result["status"] = "FatalError";
+      result["response"] = e.what();
       ers::fatal(UnknownException(ERS_HERE, e.what()));
     }
-    *retvalP = xmlrpc_c::value_string(response);
+    *retvalP = xmlrpc_c::value_bytestring(nlohmann::json::to_bson(result));
   };
 };
 
@@ -126,7 +130,7 @@ public:
   unconfigure() = default;
 
   void execute(xmlrpc_c::paramList const &paramList, xmlrpc_c::value *const retvalP) override {
-    std::string response;
+    nlohmann::json result;
     std::unordered_set<std::string> types_affected =
         daqling::core::Command::paramListToUnordered_set(paramList, 0, paramList.size());
     auto &plugin = daqling::core::ModuleManager::instance();
@@ -135,16 +139,19 @@ public:
       if (modules_affected.empty()) {
         throw InvalidCommand(ERS_HERE);
       }
-      plugin.unconfigure(modules_affected);
-      plugin.unload(modules_affected);
-      response = "Success";
+      nlohmann::json result1 = plugin.unconfigure(modules_affected);
+      nlohmann::json result2 = plugin.unload(modules_affected);
+      result = Command::mergeCommandResponses(result1, result2);
     } catch (ers::Issue &i) {
-      response = "Failure: " + std::string(i.message());
+      result["status"] = "Error";
+      result["response"] = i.message();
       ers::error(CommandIssue(ERS_HERE, i));
     } catch (std::exception const &e) {
+      result["status"] = "FatalError";
+      result["response"] = e.what();
       ers::fatal(UnknownException(ERS_HERE, e.what()));
     }
-    *retvalP = xmlrpc_c::value_string(response);
+    *retvalP = xmlrpc_c::value_bytestring(nlohmann::json::to_bson(result));
   };
 };
 
@@ -153,7 +160,7 @@ public:
   start() = default;
 
   void execute(xmlrpc_c::paramList const &paramList, xmlrpc_c::value *const retvalP) override {
-    std::string response;
+    nlohmann::json result;
     const auto run_num = static_cast<unsigned>(paramList.getInt(0));
     std::unordered_set<std::string> types_affected =
         daqling::core::Command::paramListToUnordered_set(paramList, 1, paramList.size());
@@ -165,15 +172,17 @@ public:
       if (modules_affected.empty()) {
         throw InvalidCommand(ERS_HERE);
       }
-      plugin.start(run_num, modules_affected);
-      response = "Success";
+      result = plugin.start(run_num, modules_affected);
     } catch (ers::Issue &i) {
-      response = "Failure: " + std::string(i.message());
+      result["status"] = "Error";
+      result["response"] = i.message();
       ers::error(CommandIssue(ERS_HERE, i));
     } catch (std::exception const &e) {
+      result["status"] = "FatalError";
+      result["response"] = e.what();
       ers::fatal(UnknownException(ERS_HERE, e.what()));
     }
-    *retvalP = xmlrpc_c::value_string(response);
+    *retvalP = xmlrpc_c::value_bytestring(nlohmann::json::to_bson(result));
   };
 };
 
@@ -182,7 +191,7 @@ public:
   stop() = default;
 
   void execute(xmlrpc_c::paramList const &paramList, xmlrpc_c::value *const retvalP) override {
-    std::string response;
+    nlohmann::json result;
     std::unordered_set<std::string> types_affected =
         daqling::core::Command::paramListToUnordered_set(paramList, 0, paramList.size());
     auto &plugin = daqling::core::ModuleManager::instance();
@@ -192,15 +201,17 @@ public:
       if (modules_affected.empty()) {
         throw InvalidCommand(ERS_HERE);
       }
-      plugin.stop(modules_affected);
-      response = "Success";
+      result = plugin.stop(modules_affected);
     } catch (ers::Issue &i) {
-      response = "Failure";
+      result["status"] = "Error";
+      result["response"] = i.message();
       ers::error(CommandIssue(ERS_HERE, i));
     } catch (std::exception const &e) {
+      result["status"] = "FatalError";
+      result["response"] = e.what();
       ers::fatal(UnknownException(ERS_HERE, e.what()));
     }
-    *retvalP = xmlrpc_c::value_string(response);
+    *retvalP = xmlrpc_c::value_bytestring(nlohmann::json::to_bson(result));
   };
 };
 
@@ -209,37 +220,52 @@ public:
   down() = default;
 
   void execute(xmlrpc_c::paramList const &paramList, xmlrpc_c::value *const retvalP) override {
-    std::string response;
+    nlohmann::json result;
     std::unordered_set<std::string> types_affected =
         daqling::core::Command::paramListToUnordered_set(paramList, 0, paramList.size());
     auto &plugin = daqling::core::ModuleManager::instance();
     auto &command = daqling::core::Command::instance();
     try {
       // only apply command to modules in a state that allows the command.
+      // TODO: remove this condition? Each module should decide itself whether it accepts given command.
       auto modules_affected = plugin.getModulesEligibleForCommand(
           types_affected, std::unordered_set<std::string>{"booted", "ready", "running"});
       if (modules_affected.empty() && plugin.getStatesAsString() != "booted") {
-        throw InvalidCommand(ERS_HERE);
+        throw InvalidState(ERS_HERE, plugin.getStatesAsString(), std::string("down"));
       }
       auto modules_to_stop = plugin.getModulesEligibleForCommand(types_affected, "running");
+      nlohmann::json res1, res2;
       if (!modules_to_stop.empty()) {
-        plugin.stop(modules_to_stop);
+        res1 = plugin.stop(modules_to_stop);
       }
       auto modules_to_unconfigure = plugin.getModulesEligibleForCommand(types_affected, "ready");
       if (!modules_to_unconfigure.empty()) {
-        plugin.unconfigure(modules_to_unconfigure);
+        res2 = plugin.unconfigure(modules_to_unconfigure);
       }
       if (plugin.getStatesAsString() == "booted") {
         command.stop_and_notify();
+        // TODO: handle else condition
+        // TODO: stop_and_notify() should also return json
       }
-      response = "Success";
+      result = Command::mergeCommandResponses(res1, res2);
+      if (result.empty()) {
+        result["status"] = "Success";
+        result["response"] = "";
+        for (auto mod : modules_to_stop) {
+          result["modules"][mod]["status"] = "Success";
+          result["modules"][mod]["response"] = "";
+        }
+      }
     } catch (ers::Issue &i) {
-      response = "Failure: " + std::string(i.message());
+      result["status"] = "Error";
+      result["response"] = i.message();
       ers::error(CommandIssue(ERS_HERE, i));
     } catch (std::exception const &e) {
+      result["status"] = "FatalError";
+      result["response"] = e.what();
       ers::fatal(UnknownException(ERS_HERE, e.what()));
     }
-    *retvalP = xmlrpc_c::value_string(response);
+    *retvalP = xmlrpc_c::value_bytestring(nlohmann::json::to_bson(result));
   };
 };
 
@@ -248,7 +274,7 @@ public:
   custom() = default;
 
   void execute(xmlrpc_c::paramList const &paramList, xmlrpc_c::value *const retvalP) override {
-    std::string response;
+    nlohmann::json result;
     const std::string command_name = paramList.getString(0);
     const std::string argument = paramList.getString(1);
     std::unordered_set<std::string> types_affected =
@@ -259,18 +285,20 @@ public:
     try {
       auto modules_affected = plugin.CommandRegistered(command_name, types_affected);
       if (!modules_affected.empty()) {
-        plugin.command(command_name, argument, modules_affected);
-        response = "Success";
+        result = plugin.command(command_name, argument, modules_affected);
       } else {
         throw UnregisteredCommand(ERS_HERE, command_name.c_str());
       }
     } catch (ers::Issue &i) {
-      response = "Failure: " + std::string(i.message());
+      result["status"] = "Error";
+      result["response"] = i.message();
       ers::error(CommandIssue(ERS_HERE, i));
     } catch (std::exception const &e) {
+      result["status"] = "FatalError";
+      result["response"] = e.what();
       ers::fatal(UnknownException(ERS_HERE, e.what()));
     }
-    *retvalP = xmlrpc_c::value_string(response);
+    *retvalP = xmlrpc_c::value_bytestring(nlohmann::json::to_bson(result));
   };
 };
 
@@ -282,9 +310,32 @@ public:
 *  inheritor from xmlrpc_c::method class is created and corresponding functions are added to
 *  daqling::core::ModuleManager, daqling::core::ModuleLoader and daqling::core::DAQProcess.
 *  
-*  If one wants to get some data returned from xmlrpc calls, then new xmlrpc_c::method class
-*  must be created.
-*  TODO: change return of custom command to bytestream?
+*  Each command returns json file (in bson binary format) consisting of overall execution
+*  status ("Success", "Error" or "FatalError"), module manager's response and detailed
+*  per-module execution status with thier individual responce. Response format depends
+*  on the executed command. The resulting file will look something like this:
+{
+  "status": "Success",
+  "response": "Manager's response as string",
+  "modules": [
+    {
+      "modulename1" : {
+        "status": "Success",
+        "response": "Module string response"
+      }
+    },
+    {
+      "modulename2" : {
+        "status": "Success",
+        "response": {
+          "field1" : "Some complex response",
+          "field2" : 0.502,
+          ...
+        }
+      }
+    }
+  ]
+}
 */
 
 void daqling::core::Command::setupServer(unsigned port) {
@@ -311,4 +362,123 @@ void daqling::core::Command::setupServer(unsigned port) {
   } catch (std::exception const &e) {
     ers::fatal(UnknownException(ERS_HERE, e.what()));
   }
+}
+
+nlohmann::json daqling::core::Command::mergeCommandResponses (const nlohmann::json &resp1, const nlohmann::json &resp2) {
+  nlohmann::json ret;
+  if (resp1.empty()) {
+    ret = resp2;
+    return ret;
+  }
+  if (resp2.empty()) {
+    ret = resp1;
+    return ret;
+  }
+  try {
+    // returns 0 if equal, 1 if the first argument is greater (more important) then the second one
+    // and -1 otherwise
+    auto compare_by_status = [](const nlohmann::json &resp1, const nlohmann::json &resp2) {
+      if (!resp1.contains("status") && !resp2.contains("status"))
+        return 0;
+      if (!resp2.contains("status"))
+        return 1;
+      if (!resp1.contains("status"))
+        return -1;
+      if (resp1["status"] == resp2["status"])
+        return 0;
+      if (resp1["status"] == "FatalError")
+        return 1;
+      if (resp2["status"] == "FatalError")
+        return -1;
+      if (resp1["status"] == "Error")
+        return 1;
+      if (resp2["status"] == "Error")
+        return -1;
+      return 2;
+    };
+
+    // Handle module manager status and response
+    int relation = compare_by_status(resp1, resp2);
+    switch (relation) {
+      case 0: {
+        ret["status"] = resp2["status"];
+        if (!resp1.contains("response") || resp1["response"] == "") {
+          ret["response"] = resp2["response"];
+        } else if (!resp2.contains("response") || resp2["response"] == "") {
+          ret["response"] = resp1["response"];
+        } else {
+          ret["status"] = "Error";
+          ret["response"] = "Could not merge command responces.";
+        }
+        break;
+      }
+      case -1: {
+        ret["status"] = resp2["status"];
+        ret["response"] = resp2["response"];
+        break;
+      }
+      case 1: {
+        ret["status"] = resp1["status"];
+        ret["response"] = resp1["response"];
+        break;
+      }
+      default: {
+        ret["status"] = "Error";
+        ret["response"] = "Merging error during handling command responces by their importance.";
+      }
+    }
+
+    // Handle statuses and responses of each module
+    if (!resp1.contains("modules")) {
+      ret["modules"] = resp2["modules"];
+      return ret;
+    }
+    if (!resp2.contains("modules")) {
+      ret["modules"] = resp1["modules"];
+      return ret;
+    }
+    bool modules_error = false;
+    ret["modules"] = resp1["modules"];
+    for (auto& [key, value] : resp2["modules"].items()) {
+      if (ret["modules"].contains(key)) {
+        int relation = compare_by_status(ret["modules"][key], value);
+        switch (relation) {
+          case 0: {
+            if (!ret["modules"][key].contains("response") || ret["modules"][key]["response"] == "") {
+              ret["modules"][key]["response"] = value["response"];
+            } else if (!value.contains("response") || value["response"] == "") {
+              break;
+            } else {
+              modules_error = true;
+              ret["modules"][key]["status"] = "Error";
+              ret["modules"][key]["response"] = "Could not merge command responces.";
+            }
+            break;
+          }
+          case -1: {
+            ret["modules"][key] = value;
+            break;
+          }
+          case 1: {
+            break;
+          }
+          default: {
+            modules_error = true;
+            ret["modules"][key]["status"] = "Error";
+            ret["modules"][key]["response"] = "Merging error during handling command responces by their importance.";
+          }
+        }
+      } else {
+        ret["modules"][key] = value;
+      }
+    }
+    if (modules_error) {
+      ret["status"] = "Error";
+      ret["response"] = "Error during merging modules responses.";
+    }
+  } catch (std::exception const &e) {
+    ret["status"] = "FatalError";
+    ret["response"] = e.what();
+  }
+  return ret;
 }
