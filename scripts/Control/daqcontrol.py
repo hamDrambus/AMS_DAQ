@@ -18,6 +18,7 @@
 from supervisor_wrapper import supervisor_wrapper
 import zmq
 import json
+# bson from pymogo is used, not from bson package!
 import bson
 import jsonref
 from time import sleep
@@ -47,21 +48,24 @@ class daqcontrol:
   def removeProcess(self, host, name):
     sw = supervisor_wrapper(host, self.group)
     try:
-      if sw.getProcessState(name)['statename'] == 'RUNNING':
-        try:
-          sw.stopProcess(name)
-        except Exception as e:
-          raise Exception(e, ": cannot stop process",
-                name, "(probably already stopped)")
-      sw.removeProcess(name)
+      if sw.hasProcess(name):
+        if not sw.isProcessStopped(name):
+          try:
+            sw.stopProcess(name)
+          except Exception as e:
+            raise Exception(e, ": cannot stop process", name)
+        sw.removeProcess(name)
     except Exception as e:
       raise Exception(e, ": Couldn't get process state")
 
   ## Removes multiple processes
   #  @param components The JSON array of components to remove
-  def removeProcesses(self, components):
+  #  @param extra_processes The additional names of processes to remove for each host
+  def removeProcesses(self, components, extra_processes=[]):
     for p in components:
       self.removeProcess(p['host'], p['name'])
+      for name in extra_processes:
+        self.removeProcess(p['host'], name)
 
   ## Add a single process
   #  @param exe The executable to spawn, with relative path from dir
@@ -85,12 +89,10 @@ class daqcontrol:
     except Exception as e:
       raise Exception(e, ": cannot start program", name, "(probably already started)")
 
-  ## Adds multiple components (processes)
+  ## Adds multiple daqling components (processes)
   #  @param components The JSON array of components to add
-  #  @param exe The executable to spawn, with relative path from dir
-  #  @param dir The absolute path of the directory from which exe is evaluated
-  #  @param lib_path The LD_LIBRARY_PATH to pass to the executable
-  def addComponents(self, components, exe, dir, lib_path):
+  # TODO: add printing what directories were actually resolved to
+  def addComponents(self, components):
     log_files = []
     for p in components:
       name = p['name']
@@ -98,20 +100,24 @@ class daqcontrol:
       loglvl_core = p['loglevel']['core']
       loglvl_module = p['loglevel']['module']
       loglvl_connection = p['loglevel']['connection']
-      full_exe = exe+" --name "+name+" --port "+str(port)+" --core_lvl "+loglvl_core+" --module_lvl "+loglvl_module+" --connection_lvl "+loglvl_connection
+      dir = '%(ENV_DAQ_BUILD_DIR)s'
+      # The LD_LIBRARY_PATH to pass to the executable
+      lib_path = 'LD_LIBRARY_PATH='+'%(ENV_LD_LIBRARY_PATH)s'+':'+dir+'/lib/,TDAQ_ERS_STREAM_LIBS=DaqlingStreams'
+      full_exe = "bin/daqling --name "+name+" --port "+str(port)+" --core_lvl "+loglvl_core+" --module_lvl "+loglvl_module+" --connection_lvl "+loglvl_connection
       log_files.append(self.addProcess(p['host'], name, full_exe, dir, lib_path=lib_path))
     return log_files
 
   ## Adds multiple scripts (processes)
   #  @param scripts The JSON array of scripts to add
-  #  @param script_dir The absolute path of the directory from which the relative paths are evaluated
-  def addScripts(self, scripts, script_dir):
+  # TODO: add printing what directories were actually resolved to
+  def addScripts(self, scripts):
     log_files = []
     for s in scripts:
       name = s['name']
       command = s['command']
       exe = s['executable']
-      dir = script_dir+s['directory']
+      # DAQ_SCRIPT_DIR environment variable is resolved on host machine, not here
+      dir = '%(ENV_DAQ_SCRIPT_DIR)s'+s['directory']
       log_files.append(self.addProcess(s['host'], name, exe, dir, command=command))
     return log_files
 
@@ -123,27 +129,27 @@ class daqcontrol:
   def configureProcess(self, p):
     req = 'configure'
     config = json.dumps(p)
-    return bson.loads(self.handleRequest(p['host'], p['port'], req, config).data)
+    return bson.BSON(self.handleRequest(p['host'], p['port'], req, config).data).decode()
 
   def unconfigureProcess(self, p):
     req = 'unconfigure'
-    return bson.loads(self.handleRequest(p['host'], p['port'], req).data)
+    return bson.BSON(self.handleRequest(p['host'], p['port'], req).data).decode()
 
   def startProcess(self, p, run_num=0):
     req = 'start'
-    return bson.loads(self.handleRequest(p['host'], p['port'], req, int(run_num)).data)
+    return bson.BSON(self.handleRequest(p['host'], p['port'], req, int(run_num)).data).decode()
 
   def stopProcess(self, p):
     req = 'stop'
-    return bson.loads(self.handleRequest(p['host'], p['port'], req).data)
+    return bson.BSON(self.handleRequest(p['host'], p['port'], req).data).decode()
 
   def shutdownProcess(self, p):
     req = 'down'
-    return bson.loads(self.handleRequest(p['host'], p['port'], req).data)
+    return bson.BSON(self.handleRequest(p['host'], p['port'], req).data).decode()
 
   def customCommandProcess(self, p, command, arg=None):
     req = 'custom'
-    return bson.loads(self.handleRequest(p['host'], p['port'], req, command, arg).data)
+    return bson.BSON(self.handleRequest(p['host'], p['port'], req, command, arg).data).decode()
 
   def getStatus(self, p):
       sw = supervisor_wrapper(p['host'], self.group)
@@ -151,7 +157,7 @@ class daqcontrol:
       status = []
       module_names = []
       try:
-        json_result = bson.loads(self.handleRequest(p['host'], p['port'], req).data)
+        json_result = bson.BSON(self.handleRequest(p['host'], p['port'], req).data).decode()
         # 'status' key means here whether command was executed successfully.
         # The actual status is in 'response' to the command.
         if json_result['status'] != 'Success': # Command failed
@@ -181,4 +187,16 @@ class daqcontrol:
               status.append('not_added')
               module_names.append(mod['name'])
       return status, module_names
+  
+  def listAvailableMethods(self, components):
+    """
+    For debugging purposes only.
+    Lists available supervisor commands 
+    """
+    for host in set([p['host'] for p in components]):
+      sw = supervisor_wrapper(host, self.group)
+      print('Methods for '+ host + ':')
+      sw.listAvailableMethods()
+      print('Environment for '+ host + ':')
+      print(sw.getEnvironment())
 

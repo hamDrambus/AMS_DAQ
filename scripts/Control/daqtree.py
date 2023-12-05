@@ -108,12 +108,9 @@ validate(instance=configuration, schema=schema, resolver=resolver)
 
 # define required parameters from configuration
 group = configuration['group']
-if 'path' in configuration.keys():
-  dir = configuration['path']
-else:
-  dir = env['DAQ_BUILD_DIR']
 exe = "/bin/daqling"
-lib_path = 'LD_LIBRARY_PATH='+env['LD_LIBRARY_PATH']+':'+dir+'/lib/,TDAQ_ERS_STREAM_LIBS=DaqlingStreams'
+dir = '%(ENV_DAQ_BUILD_DIR)s'
+lib_path = 'LD_LIBRARY_PATH=' + '%(ENV_LD_LIBRARY_PATH)s' + ':' + dir + '/lib/,TDAQ_ERS_STREAM_LIBS=DaqlingStreams'
 components = configuration["components"]
 
 # instanciate a daqcontrol object

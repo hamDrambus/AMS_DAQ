@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
 
         self.data_folder = "/home/fvirt/Documents/AMS_DAQ/DAQling/daqling-develop/tmp/"
         # E.g. test-2023-09-25-13:06:29.0.0.0.txt or test-2023-09-25-13:06:54.0.0.6.txt
-        self.file_pattern = "test-2023-10-02-[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9].[0-9].*.txt"
+        self.file_pattern = "test-2023-10-10-[0-2][0-9]:[0-5][0-9]:[0-5][0-9].[0-9].[0-9].*.txt"
         
         try:
             self.current_filenum = int(self.ui.le_file_number.text())

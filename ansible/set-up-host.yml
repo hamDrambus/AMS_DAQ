@@ -9,4 +9,4 @@
     - { role: control-deps, tags: minimal }
   environment:
     http_proxy: "{{ lookup('env','http_proxy') }}" 
-    https_proxy: "{{ lookup('env','https_proxy') }}" 
+    https_proxy: "{{ lookup('env','https_proxy') }}"

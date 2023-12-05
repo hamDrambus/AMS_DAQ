@@ -6,14 +6,14 @@
       "name": "metric-manager",
       "host": "localhost",
       "executable": "metric-manager.py metrics-config.json",
-      "command": "/home/fvirt/Documents/AMS_DAQ/DAQling/daqling-develop/etc/daqling_venv/bin/python3",
+      "command": "python3",
       "directory": "Monitoring/"
     },
     {
       "name": "psutil-manager",
       "host": "localhost",
       "executable": "psutil-manager.py",
-      "command": "/home/fvirt/Documents/AMS_DAQ/DAQling/daqling-develop/etc/daqling_venv/bin/python3",
+      "command": "python3",
       "directory": "Monitoring/"
     }
   ],

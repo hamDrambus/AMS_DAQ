@@ -102,12 +102,9 @@ def reinitTree(configJson, oldRoot=None):
     #     raise Exception("Invalid grafana/kibana nodes configuration:" + e)
 
     group = configuration['group']
-    if 'path' in configuration.keys():
-        dir = configuration['path']
-    else:
-        dir = env['DAQ_BUILD_DIR']
     exe = "/bin/daqling"
-    lib_path = 'LD_LIBRARY_PATH=' + env['LD_LIBRARY_PATH'] + ':' + dir + '/lib/,TDAQ_ERS_STREAM_LIBS=DaqlingStreams'
+    dir = '%(ENV_DAQ_BUILD_DIR)s'
+    lib_path = 'LD_LIBRARY_PATH=' + '%(ENV_LD_LIBRARY_PATH)s' + ':' + dir + '/lib/,TDAQ_ERS_STREAM_LIBS=DaqlingStreams'
     components = configuration["components"]
 
     dc = daqctrl(group)
@@ -141,7 +138,7 @@ def executeComm(ctrl, action):
     except Exception as e:
       logAndEmit(configName,'ERROR', ctrl+': '+str(e))
     if r != '':
-        logAndEmit(configName, 'INFO', ctrl + ': ' + str(r))
+      logAndEmit(configName, 'INFO', ctrl + ': ' + str(r))
     return r
 def allowedFile(filename):
     return '.' in filename and \

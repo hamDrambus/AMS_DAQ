@@ -26,6 +26,11 @@ BASEDIR="$(dirname "$(realpath "$BASH_SOURCE")" )"
 DAQLING_REPO_PATH="$(dirname "$(realpath "${BASEDIR}")" )"
 CONFIG_FILE="${BASEDIR}/setup.cfg"
 export DAQLING_LOCATION=${DAQLING_REPO_PATH}
+# Used by ansible
+export DAQLING_SUPERVISOR_SH=${BASEDIR}/run_supervisor.sh
+# Used by ansible
+export DAQLING_LOG_DIR=${DAQLING_LOCATION}/log
+
 HOST_SETUP=false
 INSTALL_CONTROL=false
 INSTALL_WEB=false
@@ -36,10 +41,12 @@ while getopts ":hd:c:wst" option; do
          exit;;
       d)
         echo "option d - ${OPTARG}"
-        DAQLING_SPACK_REPO_PATH_VAR=${OPTARG};;
+        # %/ ensures that trailing / in path is removed if it exists
+        DAQLING_SPACK_REPO_PATH_VAR=${OPTARG%/};;
       c)
         echo "option c - ${OPTARG}"
-        DAQ_CONFIG_PATH_VAR=${OPTARG};;
+        # %/ ensures that trailing / in path is removed if it exists
+        DAQ_CONFIG_PATH_VAR="${OPTARG%/}/";;
       w)
         echo "option w - Installing web-deps"
         INSTALL_WEB=true;;

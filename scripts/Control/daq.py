@@ -53,14 +53,14 @@ def signal_handler(sig, frame):
   print("Ctrl+C: shutting down")
   sc.stop_check_threads()
   print(formatted_spawn_join(data['components'], dc.shutdownProcess))
-  if args.arg!= 'configure':
+  if args.arg != 'configure':
     try:
-      dc.removeProcesses(data['components'])
+      dc.removeProcesses(data['components'], extra_processes=['printenv'])
     except Exception as e:
       print(e)
     if add_scripts:
       try:
-        dc.removeProcesses(data['components'])
+        dc.removeProcesses(data['components'], extra_processes=['printenv'])
       except Exception as e:
         print(e)
   quit()
@@ -151,16 +151,6 @@ validate(instance=data, schema=schema,resolver=resolver)
 
 # define required parameters from configuration
 group = data['group']
-if 'path' in data.keys():
-  dir = data['path']
-else:
-  dir = env['DAQ_BUILD_DIR']
-print("Using path "+dir)
-# TODO: this is correct only for host machine
-# scripts_dir or dir must be set instead in .conf file 
-scripts_dir = env['DAQ_SCRIPT_DIR']
-exe = "/bin/daqling"
-lib_path = 'LD_LIBRARY_PATH='+env['LD_LIBRARY_PATH']+':'+dir+'/lib/,TDAQ_ERS_STREAM_LIBS=DaqlingStreams'
 
 # instanciate a daqcontrol object
 if args.arg == "configure":
@@ -183,12 +173,13 @@ if args.arg == "remove":
 if args.arg == 'add' or args.arg == 'complete':
   log_files = []
   try:
-    log_files = dc.addComponents(data['components'], exe, dir, lib_path)
+    log_files = dc.addComponents(data['components'])
+    # dc.listAvailableMethods(data['components'])
   except Exception as e:
     print(e)
   if add_scripts:
     try:
-      log_files = log_files + dc.addScripts(data['scripts'], scripts_dir)
+      log_files = log_files + dc.addScripts(data['scripts'])
     except Exception as e:
       print(e)
   for l in log_files:

@@ -10,13 +10,17 @@ fi
 
 DAQLING_REPO_PATH="$(dirname "$(realpath "${BASEDIR}")" )"
 export DAQ_CONFIG_DIR=${DAQ_CONFIG_PATH}
-export DAQ_BUILD_DIR=$PWD/build/
+export DAQ_BUILD_DIR=${DAQLING_REPO_PATH}/build/
 export DAQ_SCRIPT_DIR=${DAQLING_REPO_PATH}/scripts/
 export DAQLING_LOCATION=${DAQLING_REPO_PATH}
+export DAQLING_LOG_DIR=${DAQLING_LOCATION}/log/
 daqpy_path=$(find -name daq.py | cut -c3-)
 alias daqpy='python3 $PWD/$daqpy_path'
 daqtree_path=$(find -name daqtree.py | cut -c3-)
 alias daqtree='python3 $PWD/$daqtree_path'
+alias sudo='sudo '
+# supervisord.conf location is defined in ansible supervisor role
+alias supervisorctl='supervisorctl -c "/etc/supervisor/daqling/supervisord.conf"'
 
 # runtime requirements
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DAQ_BUILD_DIR/lib

@@ -16,32 +16,49 @@
 - name: Copy supervisor configuration file
   copy:
     src: supervisord.conf
-    dest: /etc/supervisor/
+    dest: /etc/supervisor/daqling/
+    
+- name: Setup supervisor configuration file for DAQling
+  replace:
+    path: /etc/supervisor/daqling/supervisord.conf
+    regexp: '\$\{DAQLING_SUPERVISOR_LOG_DIR\}'
+    replace: '{{daqling_supervisor_log_dir}}'
+  vars:
+    daqling_supervisor_log_dir: "{{ lookup('env','DAQLING_LOG_DIR') }}/supervisor"
+
+- name: Create daqling log folders
+  file:
+    path: '{{daqling_log_dir}}'
+    state: directory
+  file:
+    path: '{{daqling_supervisor_log_dir}}'
+    state: directory
+  vars:
+    daqling_log_dir: "{{ lookup('env','DAQLING_LOG_DIR') }}"
+    daqling_supervisor_log_dir: "{{ lookup('env','DAQLING_LOG_DIR') }}/supervisor"
 
 - name: Copy supervisor inet configuration file
   copy:
     src: inet_http_server.conf
-    dest: /etc/supervisor/conf.d/
-
-- name: Create supervisor log file
-  file:
-    path: /var/log/supervisor
-    state: directory
-
+    dest: /etc/supervisor/daqling/conf.d/
+    
 - name: Copy supervisor systemd service file
   copy:
-    src: supervisord.service
+    src: daqling-supervisord.service
     dest: /etc/systemd/system/
+    
+- name: Setup systemd service file for DAQling
+  replace:
+    path: /etc/systemd/system/daqling-supervisord.service
+    regexp: '\$\{DAQLING_SUPERVISOR_SH\}'
+    replace: '{{daqling_supervisor_sh}}'
+  vars:
+    daqling_supervisor_sh: "{{ lookup('env','DAQLING_SUPERVISOR_SH') }}"
 
 - name: Enabling supervisord service
   systemd:
-    name: supervisord
+    name: daqling-supervisord
     enabled: yes
     daemon_reload: yes
   notify:
-    - restart supervisord
-
-- name: Create /log folder
-  file:
-    path: /log
-    state: directory
+    - restart daqling-supervisord

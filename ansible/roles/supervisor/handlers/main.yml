@@ -1,7 +1,7 @@
 # supervisor Handlers
 
-- name: restart supervisord
+- name: restart daqling-supervisord
   systemd:
-    name: supervisord
+    name: daqling-supervisord
     #daemon_reload: yes
     state: restarted
