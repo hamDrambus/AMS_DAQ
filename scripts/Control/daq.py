@@ -182,8 +182,8 @@ if args.arg == 'add' or args.arg == 'complete':
       log_files = log_files + dc.addScripts(data['scripts'])
     except Exception as e:
       print(e)
-  for l in log_files:
-    print("Host:", l[0], "\n", "tail -f", l[1])
+  #for l in log_files:
+  #  print("Host:", l[0], "\n", "tail -f", l[1])
   if args.arg == 'add':
     quit()
 

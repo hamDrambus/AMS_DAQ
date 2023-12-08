@@ -32,31 +32,18 @@ class daqcontrol:
   #  @use_supervisor If False doesn't rely on Supervisor to spawn and check the process status
   def __init__(self, group, use_supervisor=True):
     self.group = group
-    self.context = zmq.Context()
     self.use_supervisor = use_supervisor
 
   ## Get all names and process IDs
   #  Returns a map of process names and correspondent process IDs.
   def getAllNameProcessID(self, host):
     sw = supervisor_wrapper(host, self.group)
-    try:
-      return {info['name']: info['pid'] for info in sw.getAllProcessInfo()}
-    except Exception as e:
-      raise Exception(e)
+    return {info['name']: info['pid'] for info in sw.getAllProcessInfo()}
 
   ## Remove a single process
   def removeProcess(self, host, name):
     sw = supervisor_wrapper(host, self.group)
-    try:
-      if sw.hasProcess(name):
-        if not sw.isProcessStopped(name):
-          try:
-            sw.stopProcess(name)
-          except Exception as e:
-            raise Exception(e, ": cannot stop process", name)
-        sw.removeProcess(name)
-    except Exception as e:
-      raise Exception(e, ": Couldn't get process state")
+    sw.removeProcess(name)
 
   ## Removes multiple processes
   #  @param components The JSON array of components to remove
@@ -75,10 +62,16 @@ class daqcontrol:
   def addProcess(self, host, name, exe, dir, lib_path="", command=""):
     sw = supervisor_wrapper(host, self.group)
     try:
-      _, log_file = sw.addProgram(name, exe, dir, lib_path, command)
-      return log_file
+      host_, log_file, settings = sw.addProgram(name, exe, dir, lib_path, command)
+      # TODO: add logging to file for these scripts themselves
+      print(f"Added program '{self.group}:{name}' to {host}:")
+      print(f"  command: '{settings['command']}'")
+      print(f"  directory: '{settings['directory']}'")
+      # print(f"  environment: '{settings['environment']}'")
+      print(f"  logfile: '{settings['stdout_logfile']}'")
+      return (host_, log_file)
     except Exception as e:
-      raise Exception(e, ": cannot add program", name, "(probably already added)")
+      raise Exception(e, ": cannot add program", name)
 
   ## Boot a single process
   #  Executes a process if it has been already added.
@@ -87,11 +80,10 @@ class daqcontrol:
     try:
       sw.startProcess(name)
     except Exception as e:
-      raise Exception(e, ": cannot start program", name, "(probably already started)")
+      raise Exception(e, ": cannot start program", name)
 
   ## Adds multiple daqling components (processes)
   #  @param components The JSON array of components to add
-  # TODO: add printing what directories were actually resolved to
   def addComponents(self, components):
     log_files = []
     for p in components:
@@ -109,7 +101,6 @@ class daqcontrol:
 
   ## Adds multiple scripts (processes)
   #  @param scripts The JSON array of scripts to add
-  # TODO: add printing what directories were actually resolved to
   def addScripts(self, scripts):
     log_files = []
     for s in scripts:
@@ -187,16 +178,5 @@ class daqcontrol:
               status.append('not_added')
               module_names.append(mod['name'])
       return status, module_names
-  
-  def listAvailableMethods(self, components):
-    """
-    For debugging purposes only.
-    Lists available supervisor commands 
-    """
-    for host in set([p['host'] for p in components]):
-      sw = supervisor_wrapper(host, self.group)
-      print('Methods for '+ host + ':')
-      sw.listAvailableMethods()
-      print('Environment for '+ host + ':')
-      print(sw.getEnvironment())
+
 
