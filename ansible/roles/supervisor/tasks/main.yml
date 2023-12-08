@@ -1,7 +1,7 @@
-- name: Open port 9001 on firewalld for supervisor web/XML-RPC Interface
+- name: Open port 9002 on firewalld for supervisor web/XML-RPC Interface
   firewalld:
     zone: public
-    port: 9001/tcp
+    port: 9002/tcp
     permanent: true
     state: enabled
   notify:

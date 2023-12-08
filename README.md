@@ -343,10 +343,10 @@ It is because daq.py gets DAQling variables from its own environment, and then u
 But these variables (DAQling path) are correct only for localhost machine. Other hosts may have different installation paths.
 As such, supervisor will fail to launch DAQling on remote machines. Another consequence is that .py scripts (e.g. Monitoring/metric-manager.py) were not launching in clean DAQling installation as they were run in system environment, not DAQling one and as such the required packages were not installed. I fixed it by specifying usage of python3 binary in virtual environment, but it was not a very clean solution.
 
-TODO, WIP: The solution is that supervisor on each machine must be made aware of DAQling environment variables during DAQling installation.
+The solution is that supervisor on each machine must be made aware of DAQling environment variables during DAQling installation.
 Then, when launching programs or scrips, daq.py on the main machine will make use of this knowledge.
 Ideally only daq supervisor group \[group:daq\] should be executed from DAQling environment (host/.../daqling/cmake/setup.sh), but supervisor has no mechanism for that. As such I decided that whole supervisord service will be launched in the DAQling environment (after source cmake/setup.sh).
-In case that other programs will also require supervisord, it is possible to launch several services from single binary but with different names and configurations, each in its own environment. For that to work, supervisorctl which controls supervisord will have to be aliased in the DAQling environment to use correct supervisord configuration file.
+In the case when other programs will also require supervisord, it is possible to launch several services from single binary but with different names and configurations, each in its own environment. For that to work, supervisorctl which controls supervisord will have to be aliased in the DAQling environment to use correct supervisord configuration file.
 
 The main machine (the one which launches daq.py) can be made aware about environment of other hosts (DAQling location, log file location, etc.) by running printenv command on other hosts' supervisor. Speaking of logs, I also do not like that they were in some system folders by default. All logs beside that of supervisor itself should be in DAQling workspace, on each machine.
 
@@ -354,14 +354,14 @@ So the changes that were made:
 
 - Installation of supervisor in ansible playbooks is now changed. In particular, its configuration is in /etc/supervisor/daqling/ folder instead of /etc/supervisor/.
 
-- supervisord service was also renamed to daqling-supervisord (see ansible/roles/supervisor/files/daqling-supervisord.service) and is launched in DAQling environment, i.e. after executing cmake/setup.sh. The latter is done via creating service with cmake/run_supervisor.sh as an executable.
+- supervisord service was also renamed to daqling-supervisord (see ansible/roles/supervisor/files/daqling-supervisord.service) and is launched in DAQling environment, i.e. after executing cmake/setup.sh. The latter is done via creating systemd service with cmake/run_supervisor.sh as an executable.
 
 - supervisorctl is also aliased to work with daqling-supervisord when in DAQling environment (see cmake/setup.sh).
 
-The result is that supervisor used by DAQling is in its environment on each machine and other programs can install supervisord without interfering with or being broken by DAQling. TODO: change daqling-supervisord port from default so that it really is fully decoupled other supervisords.
+The result is that supervisor used by DAQling is in its environment on each machine and other programs can install supervisord without interfering with or being broken by DAQling. Also, daqling-supervisord port was changed from default 9001 to 9002 so that it really is fully decoupled from other supervisords.
 
-- WIP: Control .py scripts now call supervisor (remote processes) using supervisor's environment instead of environment of the scripts themselves. Affected scripts are ControlGUI/ControlGUIServer.py, Control/daq.py, Control/daqcontrol.py, Contol/daqtree.py, Control/supervisor_wrapper.py and possibly some others. For example, when '%(ENV\_DAQLING\_LOG\_DIR)s' is passed to daqling-supervisord server it is expanded to value of environment variable DAQLING\_LOG\_DIR on the server. TODO: some interface cleanup is required. Also did not check that anything besides Control/daq.py (e.g. Control/daqtree.py, ControlGUI/\*, Experimental/\*) works as intended as those are not feature which I intend to use or even understand.
+- Control .py scripts now call supervisor (remote processes) using supervisor's environment instead of environment of the scripts themselves. Affected scripts are ControlGUI/ControlGUIServer.py, Control/daq.py, Control/daqcontrol.py, Contol/daqtree.py, Control/supervisor_wrapper.py and possibly some others. For example, when '%(ENV\_DAQLING\_LOG\_DIR)s' is passed to daqling-supervisord server it is expanded to value of environment variable DAQLING\_LOG\_DIR on the server. TODO: Did not check that anything besides Control/daq.py (e.g. Control/daqtree.py, ControlGUI/\*, Experimental/\*) works as intended as those are not features which I intend to use or even understand.
 
-- WIP: Control scripts can get environment of any remote daqling-supervisord server (host) using supervisor_wrapper.getEnvironment method which is implemented via calling 'bash -c "export -p"' on the server. This is required to, for example, get location of log files on the remote host which are tied to DAQling environment.
+- Control scripts can get environment of any remote daqling-supervisord server (host) using supervisor_wrapper.getEnvironment method which is implemented via calling 'bash -c "export -p"' on the server. This is required to, for example, get location of log files on the remote host which are tied to DAQling environment.
 
-- All log files are now in DAQling\_folder/log/ directory, not in /var/log/. Only log file of the service itself (kept by systemd) is in the default system folder.
+- All log files are now in DAQling\_folder/log/ directory, not in /var/log/. Only log file of the service itself (kept by systemd) is in the default system folder. Accordingly, logs cleanup cron job installed by ansible (in supervisor_twiddler) was updated to new log location.

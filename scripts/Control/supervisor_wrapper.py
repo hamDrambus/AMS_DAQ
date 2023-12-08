@@ -34,7 +34,7 @@ class supervisor_wrapper:
   def __init__(self, host, group):
     self.group = group
     self.host = host
-    self.server = ServerProxy('http://'+host+':9001/RPC2')
+    self.server = ServerProxy('http://'+host+':9002/RPC2')
 
   def getAllProcessInfo(self):
     return [info for info in self.server.supervisor.getAllProcessInfo() if info['group'] == self.group]
