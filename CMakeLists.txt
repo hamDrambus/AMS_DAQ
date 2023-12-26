@@ -71,6 +71,9 @@ set(ZMQ_LIBRARIES ${ZMQ_LIBRARY})
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 FIND_PACKAGE(Threads REQUIRED)
 
+#Find fmt library
+FIND_PACKAGE(fmt REQUIRED)
+
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -114,6 +117,9 @@ set(DAQLING_DEPS_LIBRARIES ${DAQLING_DEPS_LIBRARIES} Threads::Threads)
 
 #Add ers library
 set(DAQLING_DEPS_LIBRARIES ${DAQLING_DEPS_LIBRARIES} ers)
+
+#Add fmt library
+set(DAQLING_DEPS_LIBRARIES ${DAQLING_DEPS_LIBRARIES} fmt::fmt)
 
 # https://cmake.org/cmake/help/v3.0/module/FindXMLRPC.html
 find_package(XMLRPC 1.51.06 EXACT REQUIRED c++2 abyss-server)

@@ -68,7 +68,13 @@ void CaenDummyModule::pause() { m_pause = true; }
 
 void CaenDummyModule::resume() { m_pause = false; }
 
-void CaenDummyModule::start(unsigned run_num) { DAQProcess::start(run_num); }
+void CaenDummyModule::start(unsigned run_num) {
+  if (run_num != m_state.prev_run) {
+    m_state.event_number = 0;
+    m_state.prev_run = run_num;
+  }
+  DAQProcess::start(run_num);
+}
 
 void CaenDummyModule::stop() { DAQProcess::stop(); }
 
@@ -78,7 +84,7 @@ void CaenDummyModule::runner() noexcept {
     ers::error(UnexpectedFailure(ERS_HERE, "Run abourted due to null data pointer."));
     return;
   } else {
-    m_event_data->event_number = 0;
+    m_event_data->event_number = m_state.event_number;
   }
   microseconds timestamp{};
 
@@ -88,13 +94,14 @@ void CaenDummyModule::runner() noexcept {
   ERS_DEBUG(0, "Running...");
   while (m_run) {
     if (m_pause) {
-      ERS_INFO("Paused at event number " << m_event_data->event_number);
+      ERS_INFO("Paused at event number " << m_state.event_number);
       while (m_pause && m_run) {
         std::this_thread::sleep_for(10ms);
       }
     }
     timestamp = duration_cast<microseconds>(system_clock::now().time_since_epoch());
     m_event_data->timestamp = static_cast<uint64_t>(timestamp.count());
+    m_event_data->event_number = m_state.event_number;
     try {
       generate_signal(gen);
     } catch (const std::bad_alloc &) {
@@ -119,8 +126,9 @@ void CaenDummyModule::runner() noexcept {
       ERS_WARNING("put() failed. Trying again");
     };
 
-    ++m_event_data->event_number;
-    if (m_event_data->event_number == UINT32_MAX) {
+    ++m_state.event_number;
+
+    if (m_state.event_number == UINT32_MAX) {
       m_run = false;
       ers::fatal(EventLimitReached(ERS_HERE));
     }

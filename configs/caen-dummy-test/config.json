@@ -9,12 +9,27 @@
       "modules":[{
         "name": "CAEN_ADC_test",
         "type": "CaenDummy",
-        "settings": {
+        "settings_old": {
           "adc_max_amplitude": 4096,
           "n_samples": {"min": 4000, "max": 5000},
           "baseline": {"amplitude": 2000, "noise_amplitude": 60},
           "signal": {
             "probability": 0.90,
+            "amplitude": 400,
+            "amplitude_jitter": 10,
+            "duration": 500,
+            "duration_jitter": 30,
+            "position": 2200,
+            "position_jitter": 100
+          },
+          "delay_us": 5000000
+        },
+        "settings": {
+          "adc_max_amplitude": 4096,
+          "n_samples": {"min": 5, "max": 6},
+          "baseline": {"amplitude": 2000, "noise_amplitude": 60},
+          "signal": {
+            "probability": 0.0,
             "amplitude": 400,
             "amplitude_jitter": 10,
             "duration": 500,
@@ -51,8 +66,25 @@
         "name": "CAEN_file_writer",
         "type": "CaenFileWriter",
         "settings": {
-          "filename_pattern": "/home/fvirt/Documents/AMS_DAQ/DAQling/daqling-develop/tmp/test-%D.%r.%c.%n.txt",
-          "max_filesize": 1
+          "filename_pattern": "{daqling_dir}/tmp/CAEN_{date}/{device}_run{run:02d}_f{filenum:03d}_ch{ch}.dat",
+          "max_events_per_file": 100,
+          "file_format": "txt",
+          "file_splitting": "single file",
+          "when_stopped_writing": "clear last files",
+          "when_name_conflict": "stop",
+          "when_finished_run": "ignore last files",
+          "inputs": [
+            {
+              "chid": 0,
+              "file_format": "text short",
+              "device": "dummy0",
+              "max_events_per_file": 4,
+              "when_name_conflict": "overwrite",
+              "when_finished_run": "clear last files",
+              "when_stopped_writing": "pause",
+              "file_splitting": "channel+head"
+            }
+          ]
         },
         "connections": {
           "receivers": [
@@ -74,7 +106,7 @@
           ]
         }
       }],
-      "loglevel": {"core": "WARNING", "module": "INFO", "connection": "WARNING"},
+      "loglevel": {"core": "WARNING", "module": "DEBUG", "connection": "WARNING"},
       "metrics_settings": {}
     }
   ]

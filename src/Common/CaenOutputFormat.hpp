@@ -33,8 +33,16 @@ public:
 
   struct channel_data {
     uint16_t channel;
-    std::vector<T> ys;
     std::vector<T> xs;
+    std::vector<T> ys;
+    channel_data(uint16_t ch, std::vector<T> &&xs_, std::vector<T> &&ys_) :
+        channel(ch), xs(std::move(xs_)), ys(std::move(ys_)) {}
+    channel_data(uint16_t ch, std::vector<T> &xs_, std::vector<T> &ys_) :
+        channel(ch), xs(xs_), ys(ys_) {}
+    channel_data(uint16_t ch) :
+        channel(ch), xs(), ys() {}
+    channel_data() :
+        channel(0), xs(), ys() {}
   };
   uint32_t event_number; // since device start
   uint64_t timestamp;
@@ -94,11 +102,9 @@ protected:
   size_t deserialize(const Binary & dataBuffer, std::size_t dest) override {
     size_t current_pos = dest;
     size_t sz = 0;
-    ERS_INFO("De-seriazing event, byte size = "<< dataBuffer.size());
     try {
       current_pos = dataBuffer.memread(current_pos, reinterpret_cast<void *>(&event_number), sizeof(uint32_t));
       current_pos = dataBuffer.memread(current_pos, reinterpret_cast<void *>(&timestamp), sizeof(uint64_t));
-      ERS_INFO("De-seriazed event #" << event_number << " timestamp = " << timestamp);
       
       // de-serialize string:
       current_pos = dataBuffer.memread(current_pos, reinterpret_cast<void *>(&sz), sizeof(size_t));
@@ -113,12 +119,10 @@ protected:
         current_pos = dataBuffer.memread(current_pos, reinterpret_cast<void *>(&ch_data[i].channel), sizeof(uint16_t));
         // de-serialize xs
         current_pos = dataBuffer.memread(current_pos, reinterpret_cast<void *>(&xs_sz), sizeof(size_t));
-        ERS_INFO("De-seriazed xs n_samples =" << xs_sz);
         ch_data[i].xs.resize(xs_sz);
         current_pos = dataBuffer.memread(current_pos, reinterpret_cast<void *>(ch_data[i].xs.data()), sizeof(T)*xs_sz);
         // de-serialize ys
         current_pos = dataBuffer.memread(current_pos, reinterpret_cast<void *>(&ys_sz), sizeof(size_t));
-        ERS_INFO("De-seriazed ys n_samples =" << ys_sz);
         ch_data[i].ys.resize(ys_sz);
         current_pos = dataBuffer.memread(current_pos, reinterpret_cast<void *>(ch_data[i].ys.data()), sizeof(T)*ys_sz);
       }

@@ -20,6 +20,7 @@
 
 #include <climits>
 #include <thread>
+#include <unistd.h>
 
 namespace daqling {
 namespace utilities {

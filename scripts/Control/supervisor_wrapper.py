@@ -95,6 +95,7 @@ class supervisor_wrapper:
     }
     self.server.twiddler.addProgramToGroup(self.group, name, settings)
     # Resolve environment variables in settings
+    # print(self.getEnvironment())
     environment = {'ENV_' + key: val[1:-1] if val.endswith('"') and val.startswith('"') else val \
                          for key, val in self.getEnvironment().items()}
     settings = {key: val % environment for key, val in settings.items()}

@@ -47,7 +47,6 @@ public:
   void configure() override; // optional (configuration can be handled in the constructor)
   void start(unsigned run_num) override;
   void stop() override;
-
   void runner() noexcept override;
 
 private:
@@ -68,6 +67,11 @@ private:
 
   std::chrono::microseconds m_delay_us{};
   bool m_pause;
+
+  struct State {
+    unsigned prev_run = 0;
+    uint32_t event_number = 0;
+  } m_state;
 
   std::shared_ptr<EventType> m_event_data;
 
