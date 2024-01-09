@@ -96,6 +96,8 @@ Example installing control-deps (suggested in case the host has been already set
 Example installing web-deps (after first invocation):
 
     ./cmake/install.sh -w
+    
+Note: a system reboot is required after this step as there is CAEN USB driver installation.
 
 
 #### (Optional)

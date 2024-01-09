@@ -5,6 +5,7 @@
   roles:
     - { role: packages, tags: minimal' }
     - supervisor-twiddler
+    - caen
     - { role: openhpc, tags: minimal, when: ansible_distribution == 'CentOS' and ansible_distribution_major_version == '7' }
     - { role: control-deps, tags: minimal }
   environment:

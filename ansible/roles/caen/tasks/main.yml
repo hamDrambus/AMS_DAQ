@@ -1,0 +1,93 @@
+- name: Ensure temporary directory exists
+  file:
+    path: /tmp/daqling
+    state: directory
+
+- name: Unpack CAEN USB driver
+  unarchive:
+    src: CAENUSBdrvB-1.5.4.tar.gz
+    dest: /tmp/daqling/
+
+- name: Install CAEN USB driver
+  shell: make && make install
+  args:
+    chdir: /tmp/daqling/CAENUSBdrvB-1.5.4/
+  become: yes
+  
+- name: Clean up after installing CAEN USB driver
+  file:
+    path: /tmp/daqling
+    state: "{{ item }}"
+  with_items:
+    - absent
+    - directory
+
+- name: Set CEAN install script file name
+  set_fact:
+    CAEN_install_fname: "./install_x64"
+  when: ansible_architecture == "x86_64"
+  
+- name: Set CEAN install script file name
+  set_fact:
+    CAEN_install_fname: "./install_arm64"
+  when: ansible_architecture == "arm64"
+  
+- name: Set CEAN install script file name
+  set_fact:
+    CAEN_install_fname: "./install"
+  when: ansible_architecture == "x86"
+
+- name: Unpack CAEN VME Library
+  unarchive:
+    src: CAENVMELib-v4.0.0.zip
+    dest: /tmp/daqling/
+
+- name: Install CAEN VME Library
+  shell: "{{CAEN_install_fname}}"
+  args:
+    chdir: /tmp/daqling/CAENVMELib-v4.0.0/lib/
+  become: yes
+
+- name: Clean up after installing CAEN VME Library
+  file:
+    path: /tmp/daqling
+    state: "{{ item }}"
+  with_items:
+    - absent
+    - directory
+
+- name: Unpack CAEN Comm Library
+  unarchive:
+    src: CAENComm-v1.7.0.zip
+    dest: /tmp/daqling/
+
+- name: Install CAEN Comm Library
+  shell: "{{CAEN_install_fname}}"
+  args:
+    chdir: /tmp/daqling/CAENComm-v1.7.0/lib/
+  become: yes
+
+- name: Clean up after installing CAEN Comm Library
+  file:
+    path: /tmp/daqling
+    state: "{{ item }}"
+  with_items:
+    - absent
+    - directory
+    
+- name: Unpack CAEN Digitizer Library
+  unarchive:
+    src: CAENDigitizer-v2.17.3.zip
+    dest: /tmp/daqling/
+
+- name: Install CAEN Digitizer Library
+  shell: "{{CAEN_install_fname}}"
+  args:
+    chdir: /tmp/daqling/CAENDigitizer-v2.17.3/lib/
+  become: yes
+
+- name: Clean up after installing CAEN Digitizer Library
+  file:
+    path: /tmp/daqling
+    state: absent
+
